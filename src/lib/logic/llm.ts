@@ -18,8 +18,11 @@ export type ModelRunnerConfig = {
   timeoutMs: number;
 };
 
-type FallbackArgs = {
+export type ExecuteWithModelFallbackArgs<T> = {
+  primaryModel: string;
+  fallbackModel?: string;
   onFallback?: (from: string, to: string) => void;
+  runWithModel: (modelId: string) => Promise<T>;
 };
 
 function toErrorMessage(error: unknown): string {
@@ -30,48 +33,45 @@ function toErrorMessage(error: unknown): string {
   return "Unknown model invocation error";
 }
 
+export async function executeWithModelFallback<T>(
+  args: ExecuteWithModelFallbackArgs<T>,
+): Promise<{ result: T; modelId: string }> {
+  try {
+    return {
+      result: await args.runWithModel(args.primaryModel),
+      modelId: args.primaryModel,
+    };
+  } catch (primaryError) {
+    const hasFallback =
+      typeof args.fallbackModel === "string" &&
+      args.fallbackModel.length > 0 &&
+      args.fallbackModel !== args.primaryModel;
+
+    if (!hasFallback) {
+      throw primaryError;
+    }
+
+    args.onFallback?.(args.primaryModel, args.fallbackModel!);
+
+    try {
+      return {
+        result: await args.runWithModel(args.fallbackModel!),
+        modelId: args.fallbackModel!,
+      };
+    } catch (fallbackError) {
+      throw new Error(
+        `Primary and fallback models failed. Primary: ${toErrorMessage(primaryError)}. Fallback: ${toErrorMessage(fallbackError)}.`,
+      );
+    }
+  }
+}
+
 export function createModelRunners(config: ModelRunnerConfig) {
   const provider = createOpenAI({
     apiKey: config.apiKey,
   });
 
   const getModel = (modelId: string): LanguageModel => provider.responses(modelId as never);
-
-  async function executeWithFallback<T>(
-    run: (model: LanguageModel) => Promise<T>,
-    args: FallbackArgs,
-  ): Promise<{ result: T; modelId: string }> {
-    try {
-      const result = await run(getModel(config.modelPrimary));
-      return {
-        result,
-        modelId: config.modelPrimary,
-      };
-    } catch (primaryError) {
-      const hasFallback =
-        typeof config.modelFallback === "string" &&
-        config.modelFallback.length > 0 &&
-        config.modelFallback !== config.modelPrimary;
-
-      if (!hasFallback) {
-        throw primaryError;
-      }
-
-      args.onFallback?.(config.modelPrimary, config.modelFallback!);
-
-      try {
-        const fallbackResult = await run(getModel(config.modelFallback!));
-        return {
-          result: fallbackResult,
-          modelId: config.modelFallback!,
-        };
-      } catch (fallbackError) {
-        throw new Error(
-          `Primary and fallback models failed. Primary: ${toErrorMessage(primaryError)}. Fallback: ${toErrorMessage(fallbackError)}.`,
-        );
-      }
-    }
-  }
 
   return {
     async runPlanner(args: {
@@ -91,10 +91,13 @@ export function createModelRunners(config: ModelRunnerConfig) {
         ? "Return strict JSON only. Do not add markdown fences, extra prose, or trailing text."
         : "";
 
-      const { result, modelId } = await executeWithFallback(
-        async (model) => {
+      const { result, modelId } = await executeWithModelFallback({
+        primaryModel: config.modelPrimary,
+        fallbackModel: config.modelFallback,
+        onFallback: args.onFallback,
+        runWithModel: async (modelIdToUse) => {
           const output = await generateObject({
-            model,
+            model: getModel(modelIdToUse),
             schema: planJsonSchema,
             system: plannerSystemPrompt,
             prompt: [prompt, repairSuffix].filter(Boolean).join("\n\n"),
@@ -105,8 +108,7 @@ export function createModelRunners(config: ModelRunnerConfig) {
 
           return output.object;
         },
-        args,
-      );
+      });
 
       return {
         plan: result,
@@ -122,10 +124,13 @@ export function createModelRunners(config: ModelRunnerConfig) {
       criticGaps?: string[];
       onFallback?: (from: string, to: string) => void;
     }) {
-      const { result, modelId } = await executeWithFallback(
-        async (model) => {
+      const { result, modelId } = await executeWithModelFallback({
+        primaryModel: config.modelPrimary,
+        fallbackModel: config.modelFallback,
+        onFallback: args.onFallback,
+        runWithModel: async (modelIdToUse) => {
           const output = await generateText({
-            model,
+            model: getModel(modelIdToUse),
             system: writerSystemPrompt,
             prompt: buildWriterUserPrompt({
               plan: args.plan,
@@ -146,8 +151,7 @@ export function createModelRunners(config: ModelRunnerConfig) {
 
           return markdown;
         },
-        args,
-      );
+      });
 
       return {
         markdown: result,
@@ -160,10 +164,13 @@ export function createModelRunners(config: ModelRunnerConfig) {
       draft: string;
       onFallback?: (from: string, to: string) => void;
     }) {
-      const { result, modelId } = await executeWithFallback(
-        async (model) => {
+      const { result, modelId } = await executeWithModelFallback({
+        primaryModel: config.modelPrimary,
+        fallbackModel: config.modelFallback,
+        onFallback: args.onFallback,
+        runWithModel: async (modelIdToUse) => {
           const output = await generateObject({
-            model,
+            model: getModel(modelIdToUse),
             schema: criticResultSchema,
             system: criticSystemPrompt,
             prompt: buildCriticUserPrompt({
@@ -177,8 +184,7 @@ export function createModelRunners(config: ModelRunnerConfig) {
 
           return output.object;
         },
-        args,
-      );
+      });
 
       return {
         critic: result,
