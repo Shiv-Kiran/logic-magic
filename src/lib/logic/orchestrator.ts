@@ -71,6 +71,27 @@ function emitStatus(onEvent: OnEvent, message: string, attempt?: number): void {
   onEvent({ type: "status", message, attempt });
 }
 
+function toErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "Unknown planner error";
+}
+
+function shouldRetryPlannerWithRepair(error: unknown): boolean {
+  const message = toErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes("invalid schema for response_format") ||
+    message.includes("no object generated") ||
+    message.includes("malformed") ||
+    message.includes("json") ||
+    message.includes("schema") ||
+    message.includes("type validation")
+  );
+}
+
 function formatWriterStatus(attempt: number): string {
   if (attempt === 1) {
     return "Drafting...";
@@ -106,8 +127,15 @@ export async function runProofPipeline(
         emitStatus(onEvent, `Planner model fallback: ${from} -> ${to}`);
       },
     });
-  } catch {
-    emitStatus(onEvent, "Planner output invalid. Retrying with strict JSON constraints...");
+  } catch (plannerError) {
+    if (!shouldRetryPlannerWithRepair(plannerError)) {
+      throw plannerError;
+    }
+
+    emitStatus(
+      onEvent,
+      `Planner output invalid (${toErrorMessage(plannerError)}). Retrying with strict JSON constraints...`,
+    );
     plannerResult = await deps.runPlanner({
       problem: input.problem,
       attempt: input.attempt,

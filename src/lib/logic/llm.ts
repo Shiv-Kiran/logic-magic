@@ -25,6 +25,10 @@ export type ExecuteWithModelFallbackArgs<T> = {
   runWithModel: (modelId: string) => Promise<T>;
 };
 
+function isReasoningModel(modelId: string): boolean {
+  return modelId.startsWith("gpt-5") || modelId.startsWith("o");
+}
+
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
@@ -40,6 +44,28 @@ function shouldSkipFallback(error: unknown): boolean {
     message.includes("Invalid schema for response_format") ||
     message.includes("Invalid schema for response_format 'response'")
   );
+}
+
+function withModelTimeout<T>(
+  timeoutMs: number,
+  run: (abortSignal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  return run(controller.signal)
+    .catch((error) => {
+      if (controller.signal.aborted) {
+        throw new Error(`Model call timed out after ${timeoutMs}ms.`);
+      }
+
+      throw error;
+    })
+    .finally(() => {
+      clearTimeout(timeoutId);
+    });
 }
 
 export async function executeWithModelFallback<T>(
@@ -109,14 +135,27 @@ export function createModelRunners(config: ModelRunnerConfig) {
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
-          const output = await generateObject({
-            model: getModel(modelIdToUse),
-            schema: planJsonSchema,
-            system: plannerSystemPrompt,
-            prompt: [prompt, repairSuffix].filter(Boolean).join("\n\n"),
-            maxRetries: 1,
-            timeout: config.timeoutMs,
-            temperature: 0.1,
+          const output = await withModelTimeout(config.timeoutMs, async (abortSignal) => {
+            return generateObject({
+              model: getModel(modelIdToUse),
+              schema: planJsonSchema,
+              system: plannerSystemPrompt,
+              prompt: [prompt, repairSuffix].filter(Boolean).join("\n\n"),
+              maxRetries: 1,
+              abortSignal,
+              timeout: config.timeoutMs,
+              ...(isReasoningModel(modelIdToUse)
+                ? {
+                    providerOptions: {
+                      openai: {
+                        reasoningEffort: "minimal",
+                      },
+                    },
+                  }
+                : {
+                    temperature: 0.1,
+                  }),
+            });
           });
 
           return output.object;
@@ -142,19 +181,32 @@ export function createModelRunners(config: ModelRunnerConfig) {
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
-          const output = await generateText({
-            model: getModel(modelIdToUse),
-            system: writerSystemPrompt,
-            prompt: buildWriterUserPrompt({
-              plan: args.plan,
-              problem: args.problem,
-              attempt: args.attempt,
-              previousDraft: args.previousDraft,
-              criticGaps: args.criticGaps,
-            }),
-            maxRetries: 1,
-            timeout: config.timeoutMs,
-            temperature: 0.2,
+          const output = await withModelTimeout(config.timeoutMs, async (abortSignal) => {
+            return generateText({
+              model: getModel(modelIdToUse),
+              system: writerSystemPrompt,
+              prompt: buildWriterUserPrompt({
+                plan: args.plan,
+                problem: args.problem,
+                attempt: args.attempt,
+                previousDraft: args.previousDraft,
+                criticGaps: args.criticGaps,
+              }),
+              maxRetries: 1,
+              abortSignal,
+              timeout: config.timeoutMs,
+              ...(isReasoningModel(modelIdToUse)
+                ? {
+                    providerOptions: {
+                      openai: {
+                        reasoningEffort: "minimal",
+                      },
+                    },
+                  }
+                : {
+                    temperature: 0.2,
+                  }),
+            });
           });
 
           const markdown = output.text.trim();
@@ -182,17 +234,30 @@ export function createModelRunners(config: ModelRunnerConfig) {
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
-          const output = await generateObject({
-            model: getModel(modelIdToUse),
-            schema: criticResultSchema,
-            system: criticSystemPrompt,
-            prompt: buildCriticUserPrompt({
-              plan: args.plan,
-              draft: args.draft,
-            }),
-            maxRetries: 1,
-            timeout: config.timeoutMs,
-            temperature: 0,
+          const output = await withModelTimeout(config.timeoutMs, async (abortSignal) => {
+            return generateObject({
+              model: getModel(modelIdToUse),
+              schema: criticResultSchema,
+              system: criticSystemPrompt,
+              prompt: buildCriticUserPrompt({
+                plan: args.plan,
+                draft: args.draft,
+              }),
+              maxRetries: 1,
+              abortSignal,
+              timeout: config.timeoutMs,
+              ...(isReasoningModel(modelIdToUse)
+                ? {
+                    providerOptions: {
+                      openai: {
+                        reasoningEffort: "minimal",
+                      },
+                    },
+                  }
+                : {
+                    temperature: 0,
+                  }),
+            });
           });
 
           return output.object;

@@ -17,7 +17,18 @@ function formatStatusLine(message: string, attempt?: number): string {
 }
 
 function parseErrorMessage(error: unknown): string {
+  if (
+    error instanceof DOMException &&
+    (error.name === "AbortError" || error.message.toLowerCase().includes("aborted"))
+  ) {
+    return "Request timed out while waiting for planner response.";
+  }
+
   if (error instanceof Error) {
+    if (error.message.toLowerCase().includes("aborted")) {
+      return "Request timed out while waiting for planner response.";
+    }
+
     return error.message;
   }
 
@@ -108,7 +119,14 @@ export default function Home() {
       finalPayload: null,
     });
 
+    let requestTimeout: ReturnType<typeof setTimeout> | null = null;
+
     try {
+      const requestController = new AbortController();
+      requestTimeout = setTimeout(() => {
+        requestController.abort();
+      }, 120_000);
+
       const response = await fetch("/api/proof/generate", {
         method: "POST",
         headers: {
@@ -119,6 +137,7 @@ export default function Home() {
           attempt: attempt.trim() || undefined,
           userIntent,
         }),
+        signal: requestController.signal,
       });
 
       if (!response.ok) {
@@ -172,6 +191,9 @@ export default function Home() {
       setErrorMessage(message);
       appendLog(`> [Error] ${message}`);
     } finally {
+      if (requestTimeout) {
+        clearTimeout(requestTimeout);
+      }
       setIsLoading(false);
     }
   };
