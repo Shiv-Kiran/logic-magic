@@ -33,6 +33,15 @@ function toErrorMessage(error: unknown): string {
   return "Unknown model invocation error";
 }
 
+function shouldSkipFallback(error: unknown): boolean {
+  const message = toErrorMessage(error);
+
+  return (
+    message.includes("Invalid schema for response_format") ||
+    message.includes("Invalid schema for response_format 'response'")
+  );
+}
+
 export async function executeWithModelFallback<T>(
   args: ExecuteWithModelFallbackArgs<T>,
 ): Promise<{ result: T; modelId: string }> {
@@ -42,6 +51,10 @@ export async function executeWithModelFallback<T>(
       modelId: args.primaryModel,
     };
   } catch (primaryError) {
+    if (shouldSkipFallback(primaryError)) {
+      throw primaryError;
+    }
+
     const hasFallback =
       typeof args.fallbackModel === "string" &&
       args.fallbackModel.length > 0 &&

@@ -21,7 +21,7 @@ export const contradictionSetupSchema = z.object({
 export const auditReportSchema = z.object({
   status: auditStatusSchema,
   attempts: z.number().int().min(0),
-  critiques: z.array(z.string().min(1)).default([]),
+  critiques: z.array(z.string().min(1)),
   final_verdict: z.string().min(1),
 });
 
@@ -32,24 +32,23 @@ export const planJsonSchema = z.object({
     user_intent: userIntentSchema,
   }),
   setup: z.object({
-    definitions: z.array(z.string().min(1)).default([]),
-    assumptions: z.array(z.string().min(1)).default([]),
+    definitions: z.array(z.string().min(1)),
+    assumptions: z.array(z.string().min(1)),
     goal: z.string().min(1),
   }),
-  core_logic: z
-    .object({
-      invariant: z.string().min(1).optional(),
-      base_cases: z.array(z.string().min(1)).optional(),
-      contradiction_setup: contradictionSetupSchema.optional(),
-    })
-    .catchall(z.unknown()),
+  core_logic: z.object({
+    invariant: z.string().min(1),
+    base_cases: z.array(z.string().min(1)),
+    contradiction_setup: contradictionSetupSchema.nullable(),
+    observations: z.array(z.string().min(1)),
+  }),
   steps: z.array(planStepSchema).min(1),
   audit_report: auditReportSchema,
 });
 
 export const criticResultSchema = z.object({
   status: criticStatusSchema,
-  gaps: z.array(z.string().min(1)).default([]),
+  gaps: z.array(z.string().min(1)),
   final_verdict: z.string().min(1),
 });
 

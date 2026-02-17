@@ -42,10 +42,10 @@ export type PlanJSON = {
     goal: string;
   };
   core_logic: {
-    invariant?: string;
-    base_cases?: string[];
-    contradiction_setup?: ContradictionSetup;
-    [key: string]: unknown;
+    invariant: string;
+    base_cases: string[];
+    contradiction_setup: ContradictionSetup | null;
+    observations: string[];
   };
   steps: PlanStep[];
   audit_report: AuditReport;

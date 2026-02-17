@@ -21,6 +21,7 @@ const validPlan = {
       implication: "There exists predecessor y with better path.",
       climax: "Then y should have been selected before u.",
     },
+    observations: ["Use first-failure reasoning over settled nodes."],
   },
   steps: [
     {

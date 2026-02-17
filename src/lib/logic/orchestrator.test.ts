@@ -16,6 +16,8 @@ const basePlan: PlanJSON = {
   core_logic: {
     invariant: "Settled nodes are optimal.",
     base_cases: ["Source has distance 0."],
+    contradiction_setup: null,
+    observations: ["First failure argument across settled nodes."],
   },
   steps: [
     {

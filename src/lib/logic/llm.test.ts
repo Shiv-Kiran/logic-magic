@@ -54,4 +54,23 @@ describe("executeWithModelFallback", () => {
       }),
     ).rejects.toThrow("Primary and fallback models failed");
   });
+
+  it("does not fallback on schema validation errors", async () => {
+    const calls: string[] = [];
+
+    await expect(
+      executeWithModelFallback({
+        primaryModel: "gpt-5",
+        fallbackModel: "gpt-4.1",
+        runWithModel: async (modelId) => {
+          calls.push(modelId);
+          throw new Error(
+            "Invalid schema for response_format 'response': Missing required keys.",
+          );
+        },
+      }),
+    ).rejects.toThrow("Invalid schema for response_format");
+
+    expect(calls).toEqual(["gpt-5"]);
+  });
 });

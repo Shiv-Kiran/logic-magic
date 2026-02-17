@@ -20,6 +20,9 @@ export function buildPlannerUserPrompt(input: {
     input.attempt ? "User attempt:" : "",
     input.attempt ?? "",
     "Return only valid JSON.",
+    "All schema keys are required: use [] or null when a field is not applicable.",
+    "Always include setup.definitions, setup.assumptions, core_logic.base_cases, core_logic.observations.",
+    "Set core_logic.contradiction_setup to null when contradiction is not used.",
     "Set audit_report.status to FAIL and attempts to 0 for planning stage.",
   ]
     .filter(Boolean)
