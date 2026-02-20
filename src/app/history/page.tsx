@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type RunSummary = {
   runId: string;
@@ -61,9 +62,12 @@ export default function HistoryPage() {
         <MagicLogicLogo />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-white">Proof History</h1>
-          <Link className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white" href="/">
-            Back to IDE
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Link className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white" href="/">
+              Back to IDE
+            </Link>
+          </div>
         </div>
 
         {isLoading ? <p className="text-sm text-zinc-400">Loading history...</p> : null}

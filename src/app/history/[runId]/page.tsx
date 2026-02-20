@@ -8,6 +8,7 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { FollowupBox } from "@/components/followup-box";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { PlanJSON, ProofMode, VariantRole } from "@/lib/logic/types";
 
 type RunVariant = {
@@ -131,6 +132,7 @@ export default function HistoryRunDetailPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-white">Run Detail</h1>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <Link
               className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white"
               href="/history"
@@ -217,7 +219,7 @@ export default function HistoryRunDetailPage() {
                     Strategy: {activeVariant.planJson.meta.strategy}
                   </p>
                   <p className="text-sm text-zinc-200">Goal: {activeVariant.planJson.setup.goal}</p>
-                  <details className="rounded-lg border border-border bg-zinc-100/80 p-3">
+                  <details className="plan-json-box rounded-lg border border-border p-3">
                     <summary className="cursor-pointer font-mono text-xs text-zinc-400">
                       View full plan JSON
                     </summary>

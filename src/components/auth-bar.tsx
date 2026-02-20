@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 type AuthState = {
   loading: boolean;
@@ -75,6 +76,7 @@ export function AuthBar() {
             : "Guest mode"}
       </div>
       <div className="flex items-center gap-2 text-xs">
+        <ThemeToggle />
         <Link className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white" href="/history">
           History
         </Link>

@@ -530,7 +530,7 @@ export default function Home() {
                     ? streamState.plan.setup.assumptions.join("; ")
                     : "None provided."}
                 </p>
-                <details className="rounded-lg border border-border bg-zinc-100/80 p-3">
+                <details className="plan-json-box rounded-lg border border-border p-3">
                   <summary className="cursor-pointer font-mono text-xs text-zinc-400">
                     View full plan JSON
                   </summary>

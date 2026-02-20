@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
@@ -37,7 +38,10 @@ export default function LoginPage() {
   return (
     <main className="app-grid min-h-screen px-4 py-12">
       <section className="surface mx-auto flex w-full max-w-md flex-col gap-4 p-6">
-        <MagicLogicLogo showWordmark={false} />
+        <div className="flex items-center justify-between gap-2">
+          <MagicLogicLogo showWordmark={false} />
+          <ThemeToggle />
+        </div>
         <h1 className="text-2xl font-semibold text-white">Sign in to MagicLogic</h1>
         <p className="text-sm text-zinc-400">Google sign-in unlocks your saved proof history.</p>
 
