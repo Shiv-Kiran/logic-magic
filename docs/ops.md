@@ -28,6 +28,12 @@
 - If Supabase is unavailable/misconfigured, generation still returns; background queue/history are skipped.
 - History APIs are authenticated and user-scoped (`/api/proof/history`, `/api/proof/history/[runId]`).
 - Follow-up API allows anonymous free-form questions, but run-bound context requires ownership checks.
+- Anonymous follow-up policy:
+  - `FOLLOWUP_FREE_LIMIT` (default 2) within `FOLLOWUP_FREE_WINDOW_MINUTES` (default 1440).
+  - After free quota is exhausted, API returns login-required error.
+  - Additional burst limits are enforced with IP/user windows.
+- Anonymous generate policy:
+  - `GENERATE_ANON_LIMIT` (default 6) within `GENERATE_ANON_WINDOW_MINUTES` (default 60).
 
 ## Debug Checklist
 
@@ -39,3 +45,4 @@
 6. Verify queued jobs are picked up asynchronously after generate, or manually via `/api/internal/jobs/process`.
 7. Verify signed-in user can open `/history` and `/history/[runId]` and only see their own rows.
 8. Verify follow-up returns concise markdown and uses run context only for owned runs.
+9. Verify anonymous users can ask 2 follow-ups, then receive sign-in-required response.

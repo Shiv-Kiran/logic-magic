@@ -143,5 +143,6 @@ export type FollowupResponse = {
   answerMarkdown: string;
   model: string;
   usedContext: FollowupUsedContext;
+  freeRemaining?: number | null;
 };
 

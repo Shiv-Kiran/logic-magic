@@ -9,6 +9,7 @@ import {
 } from "@/lib/logic";
 import { enqueueBackgroundJob, persistProofVariant } from "@/lib/proofs/repository";
 import { processSpecificProofJob } from "@/lib/proofs/worker";
+import { checkFixedWindowRateLimit, extractClientIp } from "@/lib/security/rate-limit";
 import { getAuthenticatedUserId } from "@/lib/supabase/auth-server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
@@ -18,6 +19,19 @@ function toErrorMessage(error: unknown): string {
   }
 
   return "Unknown error";
+}
+
+function readPositiveIntEnv(raw: string | undefined, fallback: number, max = 10_000): number {
+  if (!raw) {
+    return fallback;
+  }
+
+  const parsed = Number.parseInt(raw, 10);
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return fallback;
+  }
+
+  return Math.min(parsed, max);
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -77,6 +91,34 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const supabase = getSupabaseAdminClient();
   const userId = await getAuthenticatedUserId();
+  const clientIp = extractClientIp(request);
+
+  if (!userId) {
+    const anonLimit = readPositiveIntEnv(process.env.GENERATE_ANON_LIMIT, 6, 100);
+    const anonWindowMinutes = readPositiveIntEnv(process.env.GENERATE_ANON_WINDOW_MINUTES, 60, 24 * 60);
+    const anonCheck = checkFixedWindowRateLimit({
+      namespace: "generate-anon",
+      identifier: `ip:${clientIp}`,
+      limit: anonLimit,
+      windowMs: anonWindowMinutes * 60_000,
+    });
+
+    if (!anonCheck.allowed) {
+      return Response.json(
+        {
+          error: "Guest generation limit reached. Please sign in to continue.",
+          code: "GENERATE_LOGIN_REQUIRED",
+          loginRequired: true,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(anonCheck.retryAfterSeconds),
+          },
+        },
+      );
+    }
+  }
 
   const runId = crypto.randomUUID();
   const fastMode = parsedRequest.data.modePreference;
