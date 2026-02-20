@@ -1,16 +1,33 @@
-"use client";
+﻿"use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
-import { FinalProofPayload, StreamEvent, UserIntent } from "@/lib/logic/types";
+import { AuthBar } from "@/components/auth-bar";
+import {
+  FinalProofPayload,
+  JobStatus,
+  ProofMode,
+  StreamEvent,
+  UserIntent,
+} from "@/lib/logic/types";
 
 type StreamState = {
   plan: FinalProofPayload["plan"] | null;
-  draft: string;
-  finalPayload: FinalProofPayload | null;
+  fastDraft: string;
+  fastPayload: FinalProofPayload | null;
+  explainPayload: FinalProofPayload | null;
+  backgroundJob: {
+    runId: string;
+    jobId: string;
+    mode: ProofMode;
+    status: JobStatus;
+    error?: string;
+  } | null;
 };
+
+type ProofTab = "FAST" | "EXPLAIN";
 
 function formatStatusLine(message: string, attempt?: number): string {
   return attempt ? `> [Attempt ${attempt}] ${message}` : `> ${message}`;
@@ -39,26 +56,61 @@ export default function Home() {
   const [problem, setProblem] = useState("");
   const [attempt, setAttempt] = useState("");
   const [userIntent, setUserIntent] = useState<UserIntent>("LEARNING");
+  const [modePreference, setModePreference] = useState<ProofMode>("MATH_FORMAL");
+  const [activeProofTab, setActiveProofTab] = useState<ProofTab>("FAST");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>(["> Ready."]);
   const [streamState, setStreamState] = useState<StreamState>({
     plan: null,
-    draft: "",
-    finalPayload: null,
+    fastDraft: "",
+    fastPayload: null,
+    explainPayload: null,
+    backgroundJob: null,
   });
+  const [autoScroll, setAutoScroll] = useState(true);
+
+  const terminalRef = useRef<HTMLPreElement | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const appendLog = (line: string): void => {
     setLogs((previous) => {
       const next = [...previous, line];
-      return next.slice(-120);
+      return next.slice(-200);
     });
+  };
+
+  useEffect(() => {
+    if (!autoScroll || !terminalRef.current) {
+      return;
+    }
+
+    terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+  }, [logs, autoScroll]);
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
+  }, []);
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
   };
 
   const applyStreamEvent = (event: StreamEvent): void => {
     switch (event.type) {
       case "status": {
         appendLog(formatStatusLine(event.message, event.attempt));
+        return;
+      }
+      case "heartbeat": {
+        appendLog(`> [${event.stage}] ${Math.floor(event.elapsed_ms / 1000)}s elapsed`);
         return;
       }
       case "plan": {
@@ -69,11 +121,18 @@ export default function Home() {
         }));
         return;
       }
-      case "draft": {
-        appendLog(`> Draft updated for attempt ${event.attempt}.`);
+      case "draft_delta": {
         setStreamState((previous) => ({
           ...previous,
-          draft: event.markdown,
+          fastDraft: previous.fastDraft + event.delta,
+        }));
+        return;
+      }
+      case "draft_complete": {
+        appendLog(`> Draft completed for attempt ${event.attempt}.`);
+        setStreamState((previous) => ({
+          ...previous,
+          fastDraft: event.markdown,
         }));
         return;
       }
@@ -82,13 +141,56 @@ export default function Home() {
         appendLog(`> [Critic ${event.status}] ${summary}`);
         return;
       }
-      case "final": {
-        appendLog("> Pipeline complete.");
-        setStreamState({
+      case "final_fast": {
+        appendLog("> Fast variant complete.");
+        setStreamState((previous) => ({
+          ...previous,
           plan: event.data.plan,
-          draft: event.data.proofMarkdown,
-          finalPayload: event.data,
-        });
+          fastDraft: event.data.proofMarkdown,
+          fastPayload: event.data,
+        }));
+        return;
+      }
+      case "background_queued": {
+        appendLog(`> Background job queued: ${event.jobId}`);
+        setStreamState((previous) => ({
+          ...previous,
+          backgroundJob: {
+            runId: event.runId,
+            jobId: event.jobId,
+            mode: event.mode,
+            status: "QUEUED",
+          },
+        }));
+        return;
+      }
+      case "background_update": {
+        if (event.status === "COMPLETED" && event.proof) {
+          appendLog("> Background explanatory variant is ready.");
+          setStreamState((previous) => ({
+            ...previous,
+            explainPayload: event.proof ?? previous.explainPayload,
+            backgroundJob: {
+              runId: event.runId,
+              jobId: event.jobId,
+              mode: event.mode,
+              status: event.status,
+              error: event.error,
+            },
+          }));
+        } else {
+          setStreamState((previous) => ({
+            ...previous,
+            backgroundJob: {
+              runId: event.runId,
+              jobId: event.jobId,
+              mode: event.mode,
+              status: event.status,
+              error: event.error,
+            },
+          }));
+        }
+
         return;
       }
       case "error": {
@@ -102,6 +204,46 @@ export default function Home() {
     }
   };
 
+  const startBackgroundPolling = (jobId: string, runId: string): void => {
+    stopPolling();
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/proof/jobs/${jobId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as {
+          status: JobStatus;
+          mode: ProofMode;
+          error?: string;
+          proof?: FinalProofPayload;
+        };
+
+        applyStreamEvent({
+          type: "background_update",
+          runId,
+          jobId,
+          status: payload.status,
+          mode: payload.mode,
+          proof: payload.proof,
+          error: payload.error,
+        });
+
+        if (payload.status === "COMPLETED" || payload.status === "FAILED") {
+          stopPolling();
+        }
+      } catch {
+        // silent polling failures; next interval will retry
+      }
+    }, 2500);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
 
@@ -110,13 +252,18 @@ export default function Home() {
       return;
     }
 
+    stopPolling();
+
     setIsLoading(true);
     setErrorMessage(null);
+    setActiveProofTab("FAST");
     setLogs(["> Initializing Planner..."]);
     setStreamState({
       plan: null,
-      draft: "",
-      finalPayload: null,
+      fastDraft: "",
+      fastPayload: null,
+      explainPayload: null,
+      backgroundJob: null,
     });
 
     let requestTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -136,6 +283,7 @@ export default function Home() {
           problem,
           attempt: attempt.trim() || undefined,
           userIntent,
+          modePreference,
         }),
         signal: requestController.signal,
       });
@@ -172,6 +320,10 @@ export default function Home() {
           try {
             const parsed = JSON.parse(trimmed) as StreamEvent;
             applyStreamEvent(parsed);
+
+            if (parsed.type === "background_queued") {
+              startBackgroundPolling(parsed.jobId, parsed.runId);
+            }
           } catch {
             appendLog("> [Warn] Ignored malformed stream line.");
           }
@@ -182,6 +334,10 @@ export default function Home() {
         try {
           const parsed = JSON.parse(buffer.trim()) as StreamEvent;
           applyStreamEvent(parsed);
+
+          if (parsed.type === "background_queued") {
+            startBackgroundPolling(parsed.jobId, parsed.runId);
+          }
         } catch {
           appendLog("> [Warn] Ignored trailing malformed stream line.");
         }
@@ -198,17 +354,28 @@ export default function Home() {
     }
   };
 
-  const finalAudit = streamState.finalPayload?.audit;
-  const hasOutput = Boolean(streamState.plan || streamState.draft || streamState.finalPayload);
+  const finalAudit = streamState.fastPayload?.audit;
+  const hasOutput = Boolean(streamState.plan || streamState.fastDraft || streamState.fastPayload);
+  const explainStatus = streamState.backgroundJob?.status;
+
+  const activeProofMarkdown = useMemo(() => {
+    if (activeProofTab === "FAST") {
+      return streamState.fastPayload?.proofMarkdown ?? streamState.fastDraft;
+    }
+
+    return streamState.explainPayload?.proofMarkdown ?? "";
+  }, [activeProofTab, streamState.fastDraft, streamState.fastPayload, streamState.explainPayload]);
 
   return (
     <div className="app-grid min-h-screen">
-      <main className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-10 sm:px-8 lg:py-14">
+      <main className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-8 sm:px-8 lg:py-12">
+        <AuthBar />
+
         <header className="space-y-3">
           <p className="section-title">MagicLogic</p>
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Logic IDE for truth</h1>
           <p className="max-w-2xl text-sm text-zinc-400 sm:text-base">
-            Convert messy math-English into a formal plan, structured proof, and strict audit.
+            Fast-first proofs with a background quality variant, strict audit, and formal math rendering.
           </p>
         </header>
 
@@ -262,6 +429,32 @@ export default function Home() {
                 </label>
               </div>
 
+              <div className="flex flex-wrap items-center gap-5 text-sm text-zinc-300">
+                <span>Fast variant mode:</span>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="proof-mode"
+                    value="MATH_FORMAL"
+                    checked={modePreference === "MATH_FORMAL"}
+                    onChange={() => setModePreference("MATH_FORMAL")}
+                    disabled={isLoading}
+                  />
+                  <span>Math formal</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="proof-mode"
+                    value="EXPLANATORY"
+                    checked={modePreference === "EXPLANATORY"}
+                    onChange={() => setModePreference("EXPLANATORY")}
+                    disabled={isLoading}
+                  />
+                  <span>Explanatory</span>
+                </label>
+              </div>
+
               {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
 
               <button className="primary" type="submit" disabled={isLoading || !problem.trim()}>
@@ -272,7 +465,17 @@ export default function Home() {
 
           <article className="surface p-5 sm:p-6">
             <h2 className="section-title mb-4">Streaming Thinking</h2>
-            <pre className="terminal" aria-live="polite">
+            <pre
+              className="terminal"
+              aria-live="polite"
+              ref={terminalRef}
+              onScroll={(scrollEvent) => {
+                const target = scrollEvent.currentTarget;
+                const nearBottom =
+                  target.scrollHeight - target.scrollTop - target.clientHeight < 18;
+                setAutoScroll(nearBottom);
+              }}
+            >
               {logs.join("\n")}
             </pre>
           </article>
@@ -286,10 +489,15 @@ export default function Home() {
                 <p className="font-mono text-sm text-zinc-300">Strategy: {streamState.plan.meta.strategy}</p>
                 <p className="text-sm text-zinc-200">Goal: {streamState.plan.setup.goal}</p>
                 <p className="text-sm text-zinc-300">
-                  Assumptions: {streamState.plan.setup.assumptions.length > 0 ? streamState.plan.setup.assumptions.join("; ") : "None provided."}
+                  Assumptions:{" "}
+                  {streamState.plan.setup.assumptions.length > 0
+                    ? streamState.plan.setup.assumptions.join("; ")
+                    : "None provided."}
                 </p>
                 <details className="rounded-lg border border-border bg-black/40 p-3">
-                  <summary className="cursor-pointer font-mono text-xs text-zinc-400">View full plan JSON</summary>
+                  <summary className="cursor-pointer font-mono text-xs text-zinc-400">
+                    View full plan JSON
+                  </summary>
                   <pre className="mt-3 overflow-x-auto font-mono text-xs text-zinc-300">
                     {JSON.stringify(streamState.plan, null, 2)}
                   </pre>
@@ -301,11 +509,46 @@ export default function Home() {
           </article>
 
           <article className="surface space-y-4 p-5 sm:p-6">
-            <h2 className="section-title">The Proof</h2>
-            {streamState.draft ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="section-title">The Proof</h2>
+              <div className="flex gap-2">
+                <button
+                  className={`rounded border px-3 py-1 text-xs ${
+                    activeProofTab === "FAST"
+                      ? "border-white text-white"
+                      : "border-border text-zinc-400"
+                  }`}
+                  type="button"
+                  onClick={() => setActiveProofTab("FAST")}
+                >
+                  Fast Math
+                </button>
+                <button
+                  className={`rounded border px-3 py-1 text-xs ${
+                    activeProofTab === "EXPLAIN"
+                      ? "border-white text-white"
+                      : "border-border text-zinc-400"
+                  }`}
+                  type="button"
+                  onClick={() => setActiveProofTab("EXPLAIN")}
+                >
+                  Background Explain
+                </button>
+              </div>
+            </div>
+
+            {activeProofTab === "EXPLAIN" && !streamState.explainPayload ? (
+              <p className="text-sm text-zinc-400">
+                {streamState.backgroundJob
+                  ? `Background job ${streamState.backgroundJob.jobId} is ${explainStatus?.toLowerCase()}.`
+                  : "Background explain variant will appear after fast variant is queued."}
+              </p>
+            ) : null}
+
+            {activeProofMarkdown ? (
               <div className="proof-markdown">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-                  {streamState.draft}
+                  {activeProofMarkdown}
                 </ReactMarkdown>
               </div>
             ) : (
@@ -337,12 +580,17 @@ export default function Home() {
 
           <article className="surface space-y-3 p-5 sm:p-6">
             <h2 className="section-title">Mental Model</h2>
-            {streamState.finalPayload ? (
+            {streamState.fastPayload ? (
               <>
-                <h3 className="font-mono text-lg text-white">{streamState.finalPayload.mentalModel.title}</h3>
-                <p className="text-sm text-zinc-300">The trick: {streamState.finalPayload.mentalModel.trick}</p>
-                <p className="text-sm text-zinc-300">The logic: {streamState.finalPayload.mentalModel.logic}</p>
-                <p className="text-sm text-zinc-300">Key invariant: {streamState.finalPayload.mentalModel.invariant}</p>
+                <h3 className="font-mono text-lg text-white">{streamState.fastPayload.mentalModel.title}</h3>
+                <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">
+                  {streamState.fastPayload.mode} · {streamState.fastPayload.variantRole}
+                </p>
+                <p className="text-sm text-zinc-300">The trick: {streamState.fastPayload.mentalModel.trick}</p>
+                <p className="text-sm text-zinc-300">The logic: {streamState.fastPayload.mentalModel.logic}</p>
+                <p className="text-sm text-zinc-300">
+                  Key invariant: {streamState.fastPayload.mentalModel.invariant}
+                </p>
               </>
             ) : (
               <p className="text-zinc-300">Mental model flashcard appears after generation.</p>
@@ -351,9 +599,12 @@ export default function Home() {
         </section>
 
         {!hasOutput && !isLoading ? (
-          <p className="text-center font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">Ready for your first proof request.</p>
+          <p className="text-center font-mono text-xs uppercase tracking-[0.2em] text-zinc-500">
+            Ready for your first proof request.
+          </p>
         ) : null}
       </main>
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 :root {
   --bg: #050505;
@@ -65,7 +65,9 @@ body {
   line-height: 1.6;
   padding: 0.9rem 1rem;
   white-space: pre-wrap;
-  min-height: 280px;
+  height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 textarea,
@@ -157,3 +159,4 @@ input[type="radio"] {
   overflow-x: auto;
   overflow-y: hidden;
 }
+
