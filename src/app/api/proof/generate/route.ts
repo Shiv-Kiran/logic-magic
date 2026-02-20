@@ -1,21 +1,16 @@
-﻿import { NextRequest } from "next/server";
+﻿import { after, NextRequest } from "next/server";
 import {
+  StreamEvent,
   createModelRunners,
   generateProofRequestSchema,
+  resolveOpenAiModelConfig,
   runVariantPipeline,
-  StreamEvent,
+  toModelRunnerConfig,
 } from "@/lib/logic";
-import {
-  enqueueBackgroundJob,
-  persistProofVariant,
-} from "@/lib/proofs/repository";
+import { enqueueBackgroundJob, persistProofVariant } from "@/lib/proofs/repository";
+import { processSpecificProofJob } from "@/lib/proofs/worker";
 import { getAuthenticatedUserId } from "@/lib/supabase/auth-server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
-
-const DEFAULT_MODEL_FAST = "gpt-4.1";
-const DEFAULT_MODEL_QUALITY = "gpt-5";
-const DEFAULT_MODEL_FALLBACK = "gpt-4.1";
-const DEFAULT_TIMEOUT_MS = 20_000;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -23,19 +18,6 @@ function toErrorMessage(error: unknown): string {
   }
 
   return "Unknown error";
-}
-
-function resolveTimeoutMs(raw: string | undefined): number {
-  if (!raw) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  const parsed = Number.parseInt(raw, 10);
-  if (Number.isNaN(parsed) || parsed <= 0) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  return parsed;
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -77,10 +59,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const modelFast = process.env.OPENAI_MODEL_FAST ?? DEFAULT_MODEL_FAST;
-  const modelQuality = process.env.OPENAI_MODEL_QUALITY ?? DEFAULT_MODEL_QUALITY;
-  const modelFallback = process.env.OPENAI_MODEL_FALLBACK ?? DEFAULT_MODEL_FALLBACK;
-  const timeoutMs = resolveTimeoutMs(process.env.OPENAI_TIMEOUT_MS);
+  let modelConfig: ReturnType<typeof resolveOpenAiModelConfig>;
+  let runnerConfig: ReturnType<typeof toModelRunnerConfig>;
+  try {
+    modelConfig = resolveOpenAiModelConfig();
+    runnerConfig = toModelRunnerConfig(apiKey, modelConfig);
+  } catch (error) {
+    return Response.json(
+      {
+        error: toErrorMessage(error),
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 
   const supabase = getSupabaseAdminClient();
   const userId = await getAuthenticatedUserId();
@@ -98,13 +91,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       };
 
       try {
-        const runners = createModelRunners({
-          apiKey,
-          modelFast,
-          modelQuality,
-          modelFallback,
-          timeoutMs,
-        });
+        const runners = createModelRunners(runnerConfig);
 
         const fastResult = await runVariantPipeline({
           runId,
@@ -130,9 +117,9 @@ export async function POST(request: NextRequest): Promise<Response> {
             payload: fastResult.payload,
             userId,
             modelsUsed: fastResult.modelsUsed,
-            modelFast,
-            modelQuality,
-            modelFallback,
+            modelFast: modelConfig.modelFast,
+            modelQuality: modelConfig.modelQuality,
+            modelFallback: modelConfig.modelFallback,
             latencyMs: fastResult.latencyMs,
           });
 
@@ -156,6 +143,15 @@ export async function POST(request: NextRequest): Promise<Response> {
             runId,
             jobId: job.id,
             mode: backgroundMode,
+          });
+
+          // Asynchronous job execution without requiring Vercel cron.
+          after(async () => {
+            await processSpecificProofJob({
+              supabase,
+              modelConfig: runnerConfig,
+              jobId: job.id,
+            });
           });
         } else {
           sendEvent({
@@ -184,4 +180,3 @@ export async function POST(request: NextRequest): Promise<Response> {
     },
   });
 }
-
