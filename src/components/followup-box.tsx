@@ -184,15 +184,17 @@ export function FollowupBox({
       {meta ? <p className="font-mono text-xs text-zinc-500">{meta}</p> : null}
 
       {answer ? (
-        <div className="proof-markdown">
+        <div className="followup-response proof-markdown">
           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {answer}
           </ReactMarkdown>
         </div>
       ) : (
-        <p className="text-sm text-zinc-400">
-          Concise math-first follow-up answers will appear here.
-        </p>
+        <div className="followup-response flex items-start">
+          <p className="text-sm text-zinc-400">
+            Concise math-first follow-up answers will appear here.
+          </p>
+        </div>
       )}
     </article>
   );

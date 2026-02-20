@@ -37,6 +37,7 @@ export default function HistoryRunDetailPage() {
   const [runId, setRunId] = useState<string>("");
   const [runDetail, setRunDetail] = useState<RunDetailResponse | null>(null);
   const [activeRole, setActiveRole] = useState<VariantRole>("FAST_PRIMARY");
+  const [isProofFullscreen, setIsProofFullscreen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -163,6 +164,13 @@ export default function HistoryRunDetailPage() {
                   >
                     Background Explain
                   </button>
+                  <button
+                    className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                    type="button"
+                    onClick={() => setIsProofFullscreen(true)}
+                  >
+                    Fullscreen
+                  </button>
                 </div>
               </div>
 
@@ -171,7 +179,7 @@ export default function HistoryRunDetailPage() {
                   <p className="font-mono text-xs text-zinc-500">
                     {activeVariant.variantRole} · {activeVariant.mode} · {activeVariant.strategy}
                   </p>
-                  <div className="proof-markdown">
+                  <div className="proof-scroll-panel proof-markdown">
                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                       {activeVariant.proofMarkdown}
                     </ReactMarkdown>
@@ -235,6 +243,34 @@ export default function HistoryRunDetailPage() {
               title="Follow-up"
               defaultUseContext
             />
+
+            {isProofFullscreen ? (
+              <div className="proof-fullscreen-overlay">
+                <div className="proof-fullscreen-card">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-400">
+                      Saved Proof View
+                    </p>
+                    <button
+                      className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                      type="button"
+                      onClick={() => setIsProofFullscreen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  {activeVariant ? (
+                    <div className="proof-fullscreen-scroll proof-markdown">
+                      <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                        {activeVariant.proofMarkdown}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-400">No proof content for this variant.</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
           </>
         ) : null}
       </section>

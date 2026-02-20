@@ -60,6 +60,7 @@ export default function Home() {
   const [userIntent, setUserIntent] = useState<UserIntent>("LEARNING");
   const [modePreference, setModePreference] = useState<ProofMode>("MATH_FORMAL");
   const [activeProofTab, setActiveProofTab] = useState<ProofTab>("FAST");
+  const [isProofFullscreen, setIsProofFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [logs, setLogs] = useState<string[]>(["> Ready."]);
@@ -555,6 +556,13 @@ export default function Home() {
                 >
                   Background Explain
                 </button>
+                <button
+                  className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                  type="button"
+                  onClick={() => setIsProofFullscreen(true)}
+                >
+                  Fullscreen
+                </button>
               </div>
             </div>
 
@@ -567,7 +575,7 @@ export default function Home() {
             ) : null}
 
             {activeProofMarkdown ? (
-              <div className="proof-markdown">
+              <div className="proof-scroll-panel proof-markdown">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                   {activeProofMarkdown}
                 </ReactMarkdown>
@@ -627,6 +635,34 @@ export default function Home() {
           </p>
         ) : null}
       </main>
+
+      {isProofFullscreen ? (
+        <div className="proof-fullscreen-overlay">
+          <div className="proof-fullscreen-card">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="font-mono text-xs uppercase tracking-[0.16em] text-zinc-400">
+                Proof View
+              </p>
+              <button
+                className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                type="button"
+                onClick={() => setIsProofFullscreen(false)}
+              >
+                Close
+              </button>
+            </div>
+            {activeProofMarkdown ? (
+              <div className="proof-fullscreen-scroll proof-markdown">
+                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                  {activeProofMarkdown}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <p className="text-sm text-zinc-400">No proof content yet.</p>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
