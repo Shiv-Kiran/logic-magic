@@ -69,6 +69,13 @@ export const generateProofRequestSchema = z.object({
   modePreference: proofModeSchema.default("MATH_FORMAL"),
 });
 
+export const followupRequestSchema = z.object({
+  question: z.string().trim().min(1).max(1200),
+  runId: z.string().uuid().optional(),
+  variantRole: variantRoleSchema.optional(),
+  modeHint: proofModeSchema.optional(),
+});
+
 export const processJobsRequestSchema = z.object({
   batchSize: z.number().int().positive().max(25).optional(),
 });

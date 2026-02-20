@@ -270,3 +270,39 @@ export async function listProofHistoryByUser(args: {
   return data ?? [];
 }
 
+export type ProofRunVariantRow = {
+  id: string;
+  run_id: string | null;
+  user_id: string | null;
+  created_at: string;
+  problem: string;
+  strategy: string;
+  proof_markdown: string;
+  plan_json: unknown;
+  audit_report: unknown;
+  audit_status: string;
+  attempt_count: number;
+  proof_mode: ProofMode;
+  variant_role: VariantRole;
+};
+
+export async function listProofVariantsByRunId(args: {
+  supabase: SupabaseClient;
+  runId: string;
+}): Promise<ProofRunVariantRow[]> {
+  const { data, error } = await args.supabase
+    .from("proofs")
+    .select(
+      "id,run_id,user_id,created_at,problem,strategy,proof_markdown,plan_json,audit_report,audit_status,attempt_count,proof_mode,variant_role",
+    )
+    .eq("run_id", args.runId)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as ProofRunVariantRow[];
+}
+

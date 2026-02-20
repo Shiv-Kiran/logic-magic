@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { AuthBar } from "@/components/auth-bar";
+import { FollowupBox } from "@/components/followup-box";
+import { MagicLogicLogo } from "@/components/magiclogic-logo";
 import {
   FinalProofPayload,
   JobStatus,
@@ -366,13 +368,32 @@ export default function Home() {
     return streamState.explainPayload?.proofMarkdown ?? "";
   }, [activeProofTab, streamState.fastDraft, streamState.fastPayload, streamState.explainPayload]);
 
+  const followupContext = useMemo(() => {
+    const activePayload =
+      activeProofTab === "EXPLAIN" && streamState.explainPayload
+        ? streamState.explainPayload
+        : streamState.fastPayload;
+
+    if (!activePayload) {
+      return {
+        modeHint: modePreference,
+      };
+    }
+
+    return {
+      runId: activePayload.runId,
+      variantRole: activePayload.variantRole,
+      modeHint: activePayload.mode,
+    };
+  }, [activeProofTab, modePreference, streamState.explainPayload, streamState.fastPayload]);
+
   return (
     <div className="app-grid min-h-screen">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-8 sm:px-8 lg:py-12">
         <AuthBar />
 
         <header className="space-y-3">
-          <p className="section-title">MagicLogic</p>
+          <MagicLogicLogo />
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Logic IDE for truth</h1>
           <p className="max-w-2xl text-sm text-zinc-400 sm:text-base">
             Fast-first proofs with a background quality variant, strict audit, and formal math rendering.
@@ -596,6 +617,8 @@ export default function Home() {
               <p className="text-zinc-300">Mental model flashcard appears after generation.</p>
             )}
           </article>
+
+          <FollowupBox context={followupContext} />
         </section>
 
         {!hasOutput && !isLoading ? (

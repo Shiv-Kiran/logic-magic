@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { MagicLogicLogo } from "@/components/magiclogic-logo";
 
 type RunSummary = {
   runId: string;
@@ -57,6 +58,7 @@ export default function HistoryPage() {
   return (
     <main className="app-grid min-h-screen px-4 py-10 sm:px-8">
       <section className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+        <MagicLogicLogo />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-semibold text-white">Proof History</h1>
           <Link className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white" href="/">
@@ -99,7 +101,15 @@ export default function HistoryPage() {
                   </p>
                 </div>
               </div>
-              <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{run.statusSummary}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-[0.12em] text-zinc-500">{run.statusSummary}</p>
+                <Link
+                  className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white"
+                  href={`/history/${run.runId}`}
+                >
+                  Open run
+                </Link>
+              </div>
             </article>
           ))}
         </div>

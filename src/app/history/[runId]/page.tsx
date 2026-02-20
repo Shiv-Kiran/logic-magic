@@ -1,0 +1,243 @@
+"use client";
+
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
+import { FollowupBox } from "@/components/followup-box";
+import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { PlanJSON, ProofMode, VariantRole } from "@/lib/logic/types";
+
+type RunVariant = {
+  variantRole: VariantRole;
+  mode: ProofMode;
+  strategy: string;
+  proofMarkdown: string;
+  planJson: PlanJSON;
+  audit: {
+    status: string;
+    attempts: number;
+    critiques: string[];
+    final_verdict: string;
+  };
+  attempts: number;
+};
+
+type RunDetailResponse = {
+  runId: string;
+  createdAt: string;
+  problem: string;
+  variants: RunVariant[];
+};
+
+export default function HistoryRunDetailPage() {
+  const params = useParams<{ runId: string }>();
+  const [runId, setRunId] = useState<string>("");
+  const [runDetail, setRunDetail] = useState<RunDetailResponse | null>(null);
+  const [activeRole, setActiveRole] = useState<VariantRole>("FAST_PRIMARY");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const paramValue = params.runId;
+        const resolvedRunId = Array.isArray(paramValue) ? paramValue[0] : paramValue;
+        if (!resolvedRunId) {
+          setError("Missing run id.");
+          setIsLoading(false);
+          return;
+        }
+
+        setRunId(resolvedRunId);
+
+        const response = await fetch(`/api/proof/history/${resolvedRunId}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        if (response.status === 401) {
+          setError("Please sign in to view this run.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (response.status === 403) {
+          setError("You do not have access to this run.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (response.status === 404) {
+          setError("Run not found.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Failed to load run details.");
+        }
+
+        const payload = (await response.json()) as RunDetailResponse;
+        setRunDetail(payload);
+        const hasFast = payload.variants.some((variant) => variant.variantRole === "FAST_PRIMARY");
+        setActiveRole(hasFast ? "FAST_PRIMARY" : payload.variants[0]?.variantRole ?? "FAST_PRIMARY");
+      } catch (detailError) {
+        setError(detailError instanceof Error ? detailError.message : "Unknown error.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    load();
+  }, [params.runId]);
+
+  const activeVariant = useMemo(() => {
+    if (!runDetail) {
+      return null;
+    }
+
+    return (
+      runDetail.variants.find((variant) => variant.variantRole === activeRole) ??
+      runDetail.variants[0] ??
+      null
+    );
+  }, [activeRole, runDetail]);
+
+  return (
+    <main className="app-grid min-h-screen px-4 py-10 sm:px-8">
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        <MagicLogicLogo />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-white">Run Detail</h1>
+          <div className="flex items-center gap-2">
+            <Link
+              className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white"
+              href="/history"
+            >
+              Back to History
+            </Link>
+            <Link
+              className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white"
+              href="/"
+            >
+              Open IDE
+            </Link>
+          </div>
+        </div>
+
+        {isLoading ? <p className="text-sm text-zinc-400">Loading run...</p> : null}
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+
+        {runDetail ? (
+          <>
+            <article className="surface space-y-3 p-5 sm:p-6">
+              <p className="font-mono text-xs text-zinc-500">Run: {runId}</p>
+              <p className="text-zinc-100">{runDetail.problem}</p>
+              <p className="text-xs text-zinc-500">{new Date(runDetail.createdAt).toLocaleString()}</p>
+            </article>
+
+            <article className="surface space-y-4 p-5 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="section-title">Saved Proof</h2>
+                <div className="flex gap-2">
+                  <button
+                    className={`rounded border px-3 py-1 text-xs ${
+                      activeRole === "FAST_PRIMARY" ? "border-white text-white" : "border-border text-zinc-400"
+                    }`}
+                    type="button"
+                    onClick={() => setActiveRole("FAST_PRIMARY")}
+                  >
+                    Fast Math
+                  </button>
+                  <button
+                    className={`rounded border px-3 py-1 text-xs ${
+                      activeRole === "BACKGROUND_QUALITY"
+                        ? "border-white text-white"
+                        : "border-border text-zinc-400"
+                    }`}
+                    type="button"
+                    onClick={() => setActiveRole("BACKGROUND_QUALITY")}
+                  >
+                    Background Explain
+                  </button>
+                </div>
+              </div>
+
+              {activeVariant ? (
+                <>
+                  <p className="font-mono text-xs text-zinc-500">
+                    {activeVariant.variantRole} · {activeVariant.mode} · {activeVariant.strategy}
+                  </p>
+                  <div className="proof-markdown">
+                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                      {activeVariant.proofMarkdown}
+                    </ReactMarkdown>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-zinc-400">This variant is not available for the run.</p>
+              )}
+            </article>
+
+            <article className="surface space-y-4 p-5 sm:p-6">
+              <h2 className="section-title">The Plan</h2>
+              {activeVariant ? (
+                <>
+                  <p className="font-mono text-sm text-zinc-300">
+                    Strategy: {activeVariant.planJson.meta.strategy}
+                  </p>
+                  <p className="text-sm text-zinc-200">Goal: {activeVariant.planJson.setup.goal}</p>
+                  <details className="rounded-lg border border-border bg-black/40 p-3">
+                    <summary className="cursor-pointer font-mono text-xs text-zinc-400">
+                      View full plan JSON
+                    </summary>
+                    <pre className="mt-3 overflow-x-auto font-mono text-xs text-zinc-300">
+                      {JSON.stringify(activeVariant.planJson, null, 2)}
+                    </pre>
+                  </details>
+                </>
+              ) : null}
+            </article>
+
+            <article className="surface space-y-4 p-5 sm:p-6">
+              <h2 className="section-title">The Audit</h2>
+              {activeVariant ? (
+                <>
+                  <p className="font-mono text-sm text-zinc-200">Status: {activeVariant.audit.status}</p>
+                  <p className="text-sm text-zinc-300">Attempts: {activeVariant.audit.attempts}</p>
+                  <p className="text-sm text-zinc-200">{activeVariant.audit.final_verdict}</p>
+                  {activeVariant.audit.critiques.length > 0 ? (
+                    <ul className="list-disc space-y-2 pl-5 text-sm text-zinc-300">
+                      {activeVariant.audit.critiques.map((critique) => (
+                        <li key={critique}>{critique}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-zinc-300">No remaining gaps.</p>
+                  )}
+                </>
+              ) : null}
+            </article>
+
+            <FollowupBox
+              context={
+                activeVariant
+                  ? {
+                      runId: runDetail.runId,
+                      variantRole: activeVariant.variantRole,
+                      modeHint: activeVariant.mode,
+                    }
+                  : undefined
+              }
+              title="Follow-up"
+              defaultUseContext
+            />
+          </>
+        ) : null}
+      </section>
+    </main>
+  );
+}

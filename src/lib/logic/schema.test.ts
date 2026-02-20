@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generateProofRequestSchema, planJsonSchema } from "@/lib/logic/schema";
+import { followupRequestSchema, generateProofRequestSchema, planJsonSchema } from "@/lib/logic/schema";
 import { ProofStrategy } from "@/lib/logic/types";
 
 const validPlan = {
@@ -67,5 +67,22 @@ describe("schema guards", () => {
     if (parsed.success) {
       expect(parsed.data.meta.strategy).toBe(ProofStrategy.CONTRADICTION_MINIMALITY);
     }
+  });
+
+  it("accepts a valid follow-up request", () => {
+    const parsed = followupRequestSchema.safeParse({
+      question: "Can you restate step 3 in symbols?",
+      modeHint: "MATH_FORMAL",
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it("rejects an overlong follow-up request", () => {
+    const parsed = followupRequestSchema.safeParse({
+      question: "a".repeat(1201),
+    });
+
+    expect(parsed.success).toBe(false);
   });
 });

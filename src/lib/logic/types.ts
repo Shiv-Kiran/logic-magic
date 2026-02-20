@@ -25,6 +25,8 @@ export type AuditStatus = "PASS" | "FAIL" | "PASSED_WITH_WARNINGS";
 
 export type CriticStatus = "PASS" | "FAIL";
 
+export type FollowupUsedContext = "NONE" | "RUN_VARIANT";
+
 export type PlanStepType = "step" | "math";
 
 export type PlanStep = {
@@ -129,4 +131,17 @@ export type StreamEvent =
       error?: string;
     }
   | { type: "error"; code: string; message: string };
+
+export type FollowupRequest = {
+  question: string;
+  runId?: string;
+  variantRole?: VariantRole;
+  modeHint?: ProofMode;
+};
+
+export type FollowupResponse = {
+  answerMarkdown: string;
+  model: string;
+  usedContext: FollowupUsedContext;
+};
 
