@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.29",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.96.0",
     "ai": "^6.0.89",
     "katex": "^0.16.28",

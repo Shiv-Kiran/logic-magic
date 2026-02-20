@@ -1,4 +1,8 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+﻿import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import {
+  getSupabasePublicUrl,
+  getSupabaseServiceRoleKey,
+} from "@/lib/supabase/env";
 
 let cachedClient: SupabaseClient | null | undefined;
 
@@ -7,8 +11,8 @@ export function getSupabaseAdminClient(): SupabaseClient | null {
     return cachedClient;
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = getSupabasePublicUrl();
+  const serviceRoleKey = getSupabaseServiceRoleKey();
 
   if (!supabaseUrl || !serviceRoleKey) {
     cachedClient = null;
@@ -24,3 +28,4 @@ export function getSupabaseAdminClient(): SupabaseClient | null {
 
   return cachedClient;
 }
+

@@ -1,20 +1,22 @@
-import { createOpenAI } from "@ai-sdk/openai";
-import { generateObject, generateText, LanguageModel } from "ai";
+﻿import { createOpenAI } from "@ai-sdk/openai";
+import { generateObject, streamText, LanguageModel } from "ai";
 import {
   buildCriticUserPrompt,
   buildPlannerUserPrompt,
   buildWriterUserPrompt,
   criticSystemPrompt,
-  criticResultSchema,
-  planJsonSchema,
   plannerSystemPrompt,
   writerSystemPrompt,
-} from "@/lib/logic";
+} from "@/lib/logic/prompts";
+import { criticResultSchema, planJsonSchema } from "@/lib/logic/schema";
+import { ModelTier, PlanJSON, ProofMode } from "@/lib/logic/types";
 
 export type ModelRunnerConfig = {
   apiKey: string;
-  modelPrimary: string;
+  modelFast?: string;
+  modelQuality?: string;
   modelFallback?: string;
+  modelPrimary?: string;
   timeoutMs: number;
 };
 
@@ -66,6 +68,18 @@ function withModelTimeout<T>(
     .finally(() => {
       clearTimeout(timeoutId);
     });
+}
+
+function resolveFastModel(config: ModelRunnerConfig): string {
+  return config.modelFast ?? config.modelPrimary ?? "gpt-4.1";
+}
+
+function resolveQualityModel(config: ModelRunnerConfig): string {
+  return config.modelQuality ?? config.modelPrimary ?? resolveFastModel(config);
+}
+
+function resolveTierPrimaryModel(config: ModelRunnerConfig, tier: ModelTier): string {
+  return tier === "QUALITY" ? resolveQualityModel(config) : resolveFastModel(config);
 }
 
 export async function executeWithModelFallback<T>(
@@ -130,8 +144,10 @@ export function createModelRunners(config: ModelRunnerConfig) {
         ? "Return strict JSON only. Do not add markdown fences, extra prose, or trailing text."
         : "";
 
+      const primaryModel = resolveTierPrimaryModel(config, "FAST");
+
       const { result, modelId } = await executeWithModelFallback({
-        primaryModel: config.modelPrimary,
+        primaryModel,
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
@@ -170,24 +186,30 @@ export function createModelRunners(config: ModelRunnerConfig) {
 
     async runWriter(args: {
       problem: string;
+      plan: PlanJSON;
+      mode: ProofMode;
       attempt?: string;
-      plan: Parameters<typeof buildWriterUserPrompt>[0]["plan"];
       previousDraft?: string;
       criticGaps?: string[];
+      modelTier?: ModelTier;
+      onDelta?: (delta: string) => void;
       onFallback?: (from: string, to: string) => void;
     }) {
+      const primaryModel = resolveTierPrimaryModel(config, args.modelTier ?? "FAST");
+
       const { result, modelId } = await executeWithModelFallback({
-        primaryModel: config.modelPrimary,
+        primaryModel,
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
-          const output = await withModelTimeout(config.timeoutMs, async (abortSignal) => {
-            return generateText({
+          return withModelTimeout(config.timeoutMs, async (abortSignal) => {
+            const streamResult = streamText({
               model: getModel(modelIdToUse),
               system: writerSystemPrompt,
               prompt: buildWriterUserPrompt({
                 plan: args.plan,
                 problem: args.problem,
+                mode: args.mode,
                 attempt: args.attempt,
                 previousDraft: args.previousDraft,
                 criticGaps: args.criticGaps,
@@ -207,14 +229,20 @@ export function createModelRunners(config: ModelRunnerConfig) {
                     temperature: 0.2,
                   }),
             });
+
+            let markdown = "";
+            for await (const delta of streamResult.textStream) {
+              markdown += delta;
+              args.onDelta?.(delta);
+            }
+
+            const finalDraft = markdown.trim();
+            if (!finalDraft) {
+              throw new Error("Writer returned an empty draft.");
+            }
+
+            return finalDraft;
           });
-
-          const markdown = output.text.trim();
-          if (!markdown) {
-            throw new Error("Writer returned an empty draft.");
-          }
-
-          return markdown;
         },
       });
 
@@ -225,12 +253,16 @@ export function createModelRunners(config: ModelRunnerConfig) {
     },
 
     async runCritic(args: {
-      plan: Parameters<typeof buildCriticUserPrompt>[0]["plan"];
+      plan: PlanJSON;
       draft: string;
+      mode: ProofMode;
+      modelTier?: ModelTier;
       onFallback?: (from: string, to: string) => void;
     }) {
+      const primaryModel = resolveTierPrimaryModel(config, args.modelTier ?? "FAST");
+
       const { result, modelId } = await executeWithModelFallback({
-        primaryModel: config.modelPrimary,
+        primaryModel,
         fallbackModel: config.modelFallback,
         onFallback: args.onFallback,
         runWithModel: async (modelIdToUse) => {
@@ -242,6 +274,7 @@ export function createModelRunners(config: ModelRunnerConfig) {
               prompt: buildCriticUserPrompt({
                 plan: args.plan,
                 draft: args.draft,
+                mode: args.mode,
               }),
               maxRetries: 1,
               abortSignal,
@@ -271,3 +304,4 @@ export function createModelRunners(config: ModelRunnerConfig) {
     },
   };
 }
+

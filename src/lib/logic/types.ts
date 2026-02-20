@@ -1,4 +1,4 @@
-export enum ProofStrategy {
+﻿export enum ProofStrategy {
   DIRECT_PROOF = "DIRECT_PROOF",
   CONTRADICTION_GENERAL = "CONTRADICTION_GENERAL",
   CONTRADICTION_MINIMALITY = "CONTRADICTION_MINIMALITY",
@@ -12,6 +12,14 @@ export enum ProofStrategy {
 }
 
 export type UserIntent = "LEARNING" | "VERIFICATION";
+
+export type ProofMode = "MATH_FORMAL" | "EXPLANATORY";
+
+export type VariantRole = "FAST_PRIMARY" | "BACKGROUND_QUALITY";
+
+export type JobStatus = "QUEUED" | "PROCESSING" | "COMPLETED" | "FAILED";
+
+export type ModelTier = "FAST" | "QUALITY";
 
 export type AuditStatus = "PASS" | "FAIL" | "PASSED_WITH_WARNINGS";
 
@@ -68,6 +76,7 @@ export type GenerateProofRequest = {
   problem: string;
   attempt?: string;
   userIntent: UserIntent;
+  modePreference?: ProofMode;
 };
 
 export type MentalModel = {
@@ -78,18 +87,46 @@ export type MentalModel = {
 };
 
 export type FinalProofPayload = {
+  runId: string;
   strategy: ProofStrategy;
   attempts: number;
+  mode: ProofMode;
+  variantRole: VariantRole;
+  isBackground: boolean;
   plan: PlanJSON;
   proofMarkdown: string;
   audit: AuditReport;
   mentalModel: MentalModel;
 };
 
+export type BackgroundJobPayload = {
+  runId: string;
+  problem: string;
+  attempt?: string;
+  userIntent: UserIntent;
+  plan: PlanJSON;
+  userId?: string | null;
+};
+
 export type StreamEvent =
-  | { type: "status"; message: string; attempt?: number }
+  | { type: "status"; message: string; attempt?: number; stage?: string }
+  | { type: "heartbeat"; stage: string; elapsed_ms: number; message: string }
   | { type: "plan"; data: PlanJSON }
   | { type: "draft"; attempt: number; markdown: string }
+  | { type: "draft_delta"; attempt: number; delta: string }
+  | { type: "draft_complete"; attempt: number; markdown: string }
   | { type: "critique"; attempt: number; status: CriticStatus; gaps: string[] }
   | { type: "final"; data: FinalProofPayload }
+  | { type: "final_fast"; data: FinalProofPayload }
+  | { type: "background_queued"; runId: string; jobId: string; mode: ProofMode }
+  | {
+      type: "background_update";
+      runId: string;
+      jobId: string;
+      status: JobStatus;
+      mode: ProofMode;
+      proof?: FinalProofPayload;
+      error?: string;
+    }
   | { type: "error"; code: string; message: string };
+

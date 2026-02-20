@@ -1,13 +1,21 @@
-import { NextRequest } from "next/server";
-import { runProofPipeline } from "@/lib/logic/orchestrator";
-import { createModelRunners } from "@/lib/logic/llm";
-import { generateProofRequestSchema } from "@/lib/logic/schema";
-import { StreamEvent } from "@/lib/logic/types";
+﻿import { NextRequest } from "next/server";
+import {
+  createModelRunners,
+  generateProofRequestSchema,
+  runVariantPipeline,
+  StreamEvent,
+} from "@/lib/logic";
+import {
+  enqueueBackgroundJob,
+  persistProofVariant,
+} from "@/lib/proofs/repository";
+import { getAuthenticatedUserId } from "@/lib/supabase/auth-server";
 import { getSupabaseAdminClient } from "@/lib/supabase/server";
 
-const DEFAULT_MODEL_PRIMARY = "gpt-5";
+const DEFAULT_MODEL_FAST = "gpt-4.1";
+const DEFAULT_MODEL_QUALITY = "gpt-5";
 const DEFAULT_MODEL_FALLBACK = "gpt-4.1";
-const DEFAULT_TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -69,18 +77,18 @@ export async function POST(request: NextRequest): Promise<Response> {
     );
   }
 
-  const modelPrimary = process.env.OPENAI_MODEL_PRIMARY ?? DEFAULT_MODEL_PRIMARY;
+  const modelFast = process.env.OPENAI_MODEL_FAST ?? DEFAULT_MODEL_FAST;
+  const modelQuality = process.env.OPENAI_MODEL_QUALITY ?? DEFAULT_MODEL_QUALITY;
   const modelFallback = process.env.OPENAI_MODEL_FALLBACK ?? DEFAULT_MODEL_FALLBACK;
   const timeoutMs = resolveTimeoutMs(process.env.OPENAI_TIMEOUT_MS);
 
-  const runners = createModelRunners({
-    apiKey,
-    modelPrimary,
-    modelFallback,
-    timeoutMs,
-  });
-
   const supabase = getSupabaseAdminClient();
+  const userId = await getAuthenticatedUserId();
+
+  const runId = crypto.randomUUID();
+  const fastMode = parsedRequest.data.modePreference;
+  const backgroundMode = fastMode === "MATH_FORMAL" ? "EXPLANATORY" : "MATH_FORMAL";
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream<Uint8Array>({
@@ -90,41 +98,72 @@ export async function POST(request: NextRequest): Promise<Response> {
       };
 
       try {
-        await runProofPipeline(
-          parsedRequest.data,
-          {
-            ...runners,
-            persistProof: async (record) => {
-              if (!supabase) {
-                throw new Error("Supabase client is not configured.");
-              }
-
-              const { error } = await supabase.from("proofs").insert({
-                problem: record.input.problem,
-                attempt: record.input.attempt ?? null,
-                user_intent: record.input.userIntent,
-                strategy: record.payload.strategy,
-                confidence_score: record.payload.plan.meta.confidence_score,
-                plan_json: record.payload.plan,
-                proof_markdown: record.payload.proofMarkdown,
-                audit_status: record.payload.audit.status,
-                audit_report: record.payload.audit,
-                attempt_count: record.payload.attempts,
-                model_primary: record.modelPrimary,
-                model_fallback: record.modelFallback ?? null,
-                models_used: record.modelsUsed,
-                latency_ms: record.latencyMs,
-              });
-
-              if (error) {
-                throw new Error(error.message);
-              }
-            },
-          },
-          sendEvent,
-          modelPrimary,
+        const runners = createModelRunners({
+          apiKey,
+          modelFast,
+          modelQuality,
           modelFallback,
-        );
+          timeoutMs,
+        });
+
+        const fastResult = await runVariantPipeline({
+          runId,
+          input: parsedRequest.data,
+          mode: fastMode,
+          variantRole: "FAST_PRIMARY",
+          isBackground: false,
+          modelTier: "FAST",
+          maxAttempts: 1,
+          runners,
+          onEvent: sendEvent,
+        });
+
+        sendEvent({
+          type: "final_fast",
+          data: fastResult.payload,
+        });
+
+        if (supabase) {
+          await persistProofVariant({
+            supabase,
+            input: parsedRequest.data,
+            payload: fastResult.payload,
+            userId,
+            modelsUsed: fastResult.modelsUsed,
+            modelFast,
+            modelQuality,
+            modelFallback,
+            latencyMs: fastResult.latencyMs,
+          });
+
+          const job = await enqueueBackgroundJob({
+            supabase,
+            runId,
+            userId,
+            payload: {
+              runId,
+              problem: parsedRequest.data.problem,
+              attempt: parsedRequest.data.attempt,
+              userIntent: parsedRequest.data.userIntent,
+              plan: fastResult.payload.plan,
+              userId,
+            },
+            mode: backgroundMode,
+          });
+
+          sendEvent({
+            type: "background_queued",
+            runId,
+            jobId: job.id,
+            mode: backgroundMode,
+          });
+        } else {
+          sendEvent({
+            type: "status",
+            stage: "background",
+            message: "Supabase not configured. Background queue skipped.",
+          });
+        }
       } catch (error) {
         sendEvent({
           type: "error",
@@ -145,3 +184,4 @@ export async function POST(request: NextRequest): Promise<Response> {
     },
   });
 }
+

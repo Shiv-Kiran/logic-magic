@@ -1,7 +1,13 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import { ProofStrategy } from "@/lib/logic/types";
 
 export const userIntentSchema = z.enum(["LEARNING", "VERIFICATION"]);
+
+export const proofModeSchema = z.enum(["MATH_FORMAL", "EXPLANATORY"]);
+
+export const variantRoleSchema = z.enum(["FAST_PRIMARY", "BACKGROUND_QUALITY"]);
+
+export const jobStatusSchema = z.enum(["QUEUED", "PROCESSING", "COMPLETED", "FAILED"]);
 
 export const auditStatusSchema = z.enum(["PASS", "FAIL", "PASSED_WITH_WARNINGS"]);
 
@@ -60,4 +66,10 @@ export const generateProofRequestSchema = z.object({
   problem: z.string().trim().min(1),
   attempt: z.string().trim().optional(),
   userIntent: userIntentSchema,
+  modePreference: proofModeSchema.default("MATH_FORMAL"),
 });
+
+export const processJobsRequestSchema = z.object({
+  batchSize: z.number().int().positive().max(25).optional(),
+});
+

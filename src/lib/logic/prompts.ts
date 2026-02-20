@@ -1,4 +1,4 @@
-import { PlanJSON, ProofStrategy, UserIntent } from "@/lib/logic/types";
+﻿import { PlanJSON, ProofMode, ProofStrategy, UserIntent } from "@/lib/logic/types";
 
 const strategies = Object.values(ProofStrategy).join(", ");
 
@@ -29,19 +29,39 @@ export function buildPlannerUserPrompt(input: {
     .join("\n\n");
 }
 
+const mathFormalModeInstruction = [
+  "Mode: MATH_FORMAL.",
+  "Write a highly formal, concise theorem-proof style response.",
+  "Prefer symbolic derivations and compact argument steps.",
+  "Minimize prose and avoid storytelling.",
+  "Use KaTeX-compatible delimiters: inline $...$, display $$...$$.",
+].join(" ");
+
+const explanatoryModeInstruction = [
+  "Mode: EXPLANATORY.",
+  "Write an intuitive explanation-first proof with clear transitions.",
+  "Keep equations, but explain why each step is valid in plain language.",
+  "Still keep rigor and avoid handwaving.",
+  "Use KaTeX-compatible delimiters: inline $...$, display $$...$$.",
+].join(" ");
+
 export const writerSystemPrompt = `You are the Proof Writer for MagicLogic.
-Write a concise, rigorous proof in markdown.
-Use LaTeX only where helpful.
+Write a rigorous proof in markdown.
 Do not invent assumptions that contradict the plan.`;
 
 export function buildWriterUserPrompt(input: {
   plan: PlanJSON;
   problem: string;
+  mode: ProofMode;
   attempt?: string;
   previousDraft?: string;
   criticGaps?: string[];
 }): string {
+  const modeInstruction =
+    input.mode === "EXPLANATORY" ? explanatoryModeInstruction : mathFormalModeInstruction;
+
   return [
+    modeInstruction,
     "Problem:",
     input.problem,
     "Structured plan JSON:",
@@ -49,7 +69,7 @@ export function buildWriterUserPrompt(input: {
     input.attempt ? "Original user attempt:\n" + input.attempt : "",
     input.previousDraft ? "Previous draft:\n" + input.previousDraft : "",
     input.criticGaps && input.criticGaps.length > 0
-      ? "Critic required fixes:\n- " + input.criticGaps.join("\n- ")
+      ? "Required fixes:\n- " + input.criticGaps.join("\n- ")
       : "",
     "Return markdown only.",
   ]
@@ -68,12 +88,21 @@ status must be PASS or FAIL.`;
 export function buildCriticUserPrompt(input: {
   plan: PlanJSON;
   draft: string;
+  mode: ProofMode;
 }): string {
+  const modeCheck =
+    input.mode === "MATH_FORMAL"
+      ? "Verify that language stays compact and mathematically formal."
+      : "Verify that explanations are clear and each equation is justified in plain language.";
+
   return [
+    `Mode: ${input.mode}`,
     "Plan JSON:",
     JSON.stringify(input.plan, null, 2),
     "Draft proof markdown:",
     input.draft,
     "Check contradiction/minimality patterns when relevant to selected strategy.",
+    modeCheck,
   ].join("\n\n");
 }
+
