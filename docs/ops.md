@@ -4,22 +4,31 @@
 
 - Endpoint: `POST /api/proof/generate`
 - Response mode: NDJSON streaming (`application/x-ndjson`)
-- Default timeout per model call: `OPENAI_TIMEOUT_MS` (fallback 30s)
+- Default timeout per model call: `OPENAI_TIMEOUT_MS` (fallback 20s)
+- Fast-first model policy:
+  - Fast path uses `OPENAI_MODEL_FAST` (default `gpt-4.1`)
+  - Background quality path uses `OPENAI_MODEL_QUALITY` (default `gpt-5`)
+  - Per-step fallback uses `OPENAI_MODEL_FALLBACK`
 
 ## Fallback Rules
 
-- Primary model runs first (`OPENAI_MODEL_PRIMARY`).
-- If call fails, pipeline retries that step on `OPENAI_MODEL_FALLBACK`.
+- Selected tier model runs first (`OPENAI_MODEL_FAST` or `OPENAI_MODEL_QUALITY`).
+- If a step fails, that step retries on `OPENAI_MODEL_FALLBACK`.
 - If both models fail in a step, pipeline returns an `error` event.
 
 ## Persistence Rules
 
-- Insert into `public.proofs` only when final audit status is `PASS` or `PASSED_WITH_WARNINGS`.
-- If Supabase is unavailable/misconfigured, proof still returns to user and stream logs a status warning.
+- Fast variant is persisted when Supabase is configured.
+- Background jobs are written to `public.proof_jobs` and processed by `POST /api/internal/jobs/process`.
+- If Supabase is unavailable/misconfigured, generation still returns; background queue/history are skipped.
+- History is authenticated and user-scoped (`/api/proof/history`).
 
 ## Debug Checklist
 
 1. Confirm `.env.local` values exist and are non-empty.
-2. Run `npm run lint && npm run test && npm run build`.
-3. Verify network stream contains ordered `status -> ... -> final` events.
-4. Verify failed 3-attempt sessions do not create a DB row.
+2. For auth/history, confirm Google provider is enabled in Supabase and callback URL is configured.
+3. For background jobs, confirm cron secret is configured (`INTERNAL_CRON_SECRET` or `CRON_SECRET`).
+4. Run `npm run lint && npm run test && npm run build`.
+5. Verify stream order includes `status`, `heartbeat`, `plan`, `draft_delta`, `final_fast`, `background_queued`.
+6. Verify `/api/internal/jobs/process` marks queued jobs as `PROCESSING` then `COMPLETED` or `FAILED`.
+7. Verify signed-in user can open `/history` and only see their own rows.

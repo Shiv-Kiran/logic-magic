@@ -114,6 +114,7 @@ export async function runProofPipeline(
   const now = deps.now ?? Date.now;
   const startedAt = now();
   const modelsUsed = new Set<string>();
+  const runId = crypto.randomUUID();
 
   emitStatus(onEvent, "Analyzing Logic Structure...");
 
@@ -224,8 +225,12 @@ export async function runProofPipeline(
   };
 
   const payload: FinalProofPayload = {
+    runId,
     strategy: plan.meta.strategy,
     attempts: attempt,
+    mode: input.modePreference ?? "MATH_FORMAL",
+    variantRole: "FAST_PRIMARY",
+    isBackground: false,
     plan,
     proofMarkdown: currentDraft,
     audit: auditReport,
