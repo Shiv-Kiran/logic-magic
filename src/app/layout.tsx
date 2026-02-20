@@ -16,6 +16,16 @@ const jetBrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "MagicLogic",
   description: "Logic IDE for transforming natural-language proofs into structured formal reasoning.",
+  icons: {
+    icon: [
+      {
+        url: "/magiclogic-icon.svg?v=1",
+        type: "image/svg+xml",
+      },
+    ],
+    shortcut: ["/magiclogic-icon.svg?v=1"],
+    apple: ["/magiclogic-icon.svg?v=1"],
+  },
 };
 
 export default function RootLayout({

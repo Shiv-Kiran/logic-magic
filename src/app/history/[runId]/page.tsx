@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -31,6 +31,23 @@ type RunDetailResponse = {
   problem: string;
   variants: RunVariant[];
 };
+
+function FullscreenIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 8h18" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
 
 export default function HistoryRunDetailPage() {
   const params = useParams<{ runId: string }>();
@@ -130,7 +147,7 @@ export default function HistoryRunDetailPage() {
         </div>
 
         {isLoading ? <p className="text-sm text-zinc-400">Loading run...</p> : null}
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
         {runDetail ? (
           <>
@@ -165,11 +182,13 @@ export default function HistoryRunDetailPage() {
                     Background Explain
                   </button>
                   <button
-                    className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                    className="icon-button"
                     type="button"
                     onClick={() => setIsProofFullscreen(true)}
+                    aria-label="Open proof fullscreen"
+                    title="Open proof fullscreen"
                   >
-                    Fullscreen
+                    <FullscreenIcon />
                   </button>
                 </div>
               </div>
@@ -177,7 +196,7 @@ export default function HistoryRunDetailPage() {
               {activeVariant ? (
                 <>
                   <p className="font-mono text-xs text-zinc-500">
-                    {activeVariant.variantRole} · {activeVariant.mode} · {activeVariant.strategy}
+                    {activeVariant.variantRole} | {activeVariant.mode} | {activeVariant.strategy}
                   </p>
                   <div className="proof-scroll-panel proof-markdown">
                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
@@ -198,7 +217,7 @@ export default function HistoryRunDetailPage() {
                     Strategy: {activeVariant.planJson.meta.strategy}
                   </p>
                   <p className="text-sm text-zinc-200">Goal: {activeVariant.planJson.setup.goal}</p>
-                  <details className="rounded-lg border border-border bg-black/40 p-3">
+                  <details className="rounded-lg border border-border bg-zinc-100/80 p-3">
                     <summary className="cursor-pointer font-mono text-xs text-zinc-400">
                       View full plan JSON
                     </summary>
@@ -252,11 +271,13 @@ export default function HistoryRunDetailPage() {
                       Saved Proof View
                     </p>
                     <button
-                      className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                      className="icon-button"
                       type="button"
                       onClick={() => setIsProofFullscreen(false)}
+                      aria-label="Close proof fullscreen"
+                      title="Close"
                     >
-                      Close
+                      <CloseIcon />
                     </button>
                   </div>
                   {activeVariant ? (

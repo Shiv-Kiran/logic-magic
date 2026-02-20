@@ -31,6 +31,23 @@ type StreamState = {
 
 type ProofTab = "FAST" | "EXPLAIN";
 
+function FullscreenIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 8h18" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function formatStatusLine(message: string, attempt?: number): string {
   return attempt ? `> [Attempt ${attempt}] ${message}` : `> ${message}`;
 }
@@ -395,10 +412,7 @@ export default function Home() {
 
         <header className="space-y-3">
           <MagicLogicLogo />
-          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Logic IDE for truth</h1>
-          <p className="max-w-2xl text-sm text-zinc-400 sm:text-base">
-            Fast-first proofs with a background quality variant, strict audit, and formal math rendering.
-          </p>
+          <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Logic IDE for True Math</h1>
         </header>
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -410,7 +424,7 @@ export default function Home() {
                 <textarea
                   value={problem}
                   onChange={(inputEvent) => setProblem(inputEvent.target.value)}
-                  placeholder="Show that Dijkstra works using contradiction."
+                  placeholder="Prove that the sum of two even integers is even."
                   disabled={isLoading}
                 />
               </label>
@@ -420,7 +434,7 @@ export default function Home() {
                 <textarea
                   value={attempt}
                   onChange={(inputEvent) => setAttempt(inputEvent.target.value)}
-                  placeholder="I think we choose the first wrong vertex and derive a contradiction..."
+                  placeholder="Let the integers be 2a and 2b, then their sum is 2(a+b)..."
                   disabled={isLoading}
                 />
               </label>
@@ -516,7 +530,7 @@ export default function Home() {
                     ? streamState.plan.setup.assumptions.join("; ")
                     : "None provided."}
                 </p>
-                <details className="rounded-lg border border-border bg-black/40 p-3">
+                <details className="rounded-lg border border-border bg-zinc-100/80 p-3">
                   <summary className="cursor-pointer font-mono text-xs text-zinc-400">
                     View full plan JSON
                   </summary>
@@ -557,11 +571,13 @@ export default function Home() {
                   Background Explain
                 </button>
                 <button
-                  className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                  className="icon-button"
                   type="button"
                   onClick={() => setIsProofFullscreen(true)}
+                  aria-label="Open proof fullscreen"
+                  title="Open proof fullscreen"
                 >
-                  Fullscreen
+                  <FullscreenIcon />
                 </button>
               </div>
             </div>
@@ -644,11 +660,13 @@ export default function Home() {
                 Proof View
               </p>
               <button
-                className="rounded border border-border px-3 py-1 text-xs text-zinc-300 hover:text-white"
+                className="icon-button"
                 type="button"
                 onClick={() => setIsProofFullscreen(false)}
+                aria-label="Close proof fullscreen"
+                title="Close"
               >
-                Close
+                <CloseIcon />
               </button>
             </div>
             {activeProofMarkdown ? (

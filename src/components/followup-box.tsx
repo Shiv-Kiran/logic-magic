@@ -30,7 +30,7 @@ type FollowupBoxProps = {
 export function FollowupBox({
   context,
   title = "Follow-up",
-  placeholder = "Ask a concise follow-up question about this proof...",
+  placeholder = "Ask a focused follow-up question...",
   defaultUseContext = false,
 }: FollowupBoxProps) {
   const [question, setQuestion] = useState("");
@@ -39,7 +39,6 @@ export function FollowupBox({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [useContext, setUseContext] = useState(defaultUseContext && Boolean(context?.runId));
-  const [freeRemaining, setFreeRemaining] = useState<number | null>(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
 
   useEffect(() => {
@@ -76,7 +75,6 @@ export function FollowupBox({
 
     setIsLoading(true);
     setError(null);
-    setShowLoginPrompt(false);
 
     try {
       const response = await fetch("/api/proof/followup", {
@@ -96,16 +94,14 @@ export function FollowupBox({
               error?: string;
               code?: string;
               loginRequired?: boolean;
-              freeRemaining?: number;
             }
           | null;
 
-        if (payload?.freeRemaining !== undefined) {
-          setFreeRemaining(payload.freeRemaining);
-        }
-
         if (payload?.loginRequired || payload?.code === "FOLLOWUP_LOGIN_REQUIRED") {
           setShowLoginPrompt(true);
+          setError(null);
+          setIsLoading(false);
+          return;
         }
 
         throw new Error(payload?.error ?? "Failed to fetch follow-up answer.");
@@ -115,13 +111,7 @@ export function FollowupBox({
 
       setAnswer(payload.answerMarkdown);
       setMeta(`Model: ${payload.model} | Context: ${payload.usedContext}`);
-
-      if (payload.freeRemaining !== undefined) {
-        setFreeRemaining(payload.freeRemaining);
-      } else {
-        setFreeRemaining(null);
-      }
-
+      setShowLoginPrompt(false);
       setQuestion("");
     } catch (followupError) {
       setError(followupError instanceof Error ? followupError.message : "Unknown follow-up error.");
@@ -133,10 +123,6 @@ export function FollowupBox({
   return (
     <article className="surface space-y-4 p-5 sm:p-6">
       <h2 className="section-title">{title}</h2>
-      <p className="text-xs text-zinc-500">
-        Guests get 2 free follow-ups before sign-in.
-        {freeRemaining !== null ? ` Remaining: ${freeRemaining}` : ""}
-      </p>
 
       <form className="space-y-3" onSubmit={handleSubmit}>
         <textarea
@@ -150,7 +136,7 @@ export function FollowupBox({
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           {context?.runId ? (
-            <label className="inline-flex items-center gap-2 text-xs text-zinc-400">
+            <label className="inline-flex items-center gap-2 text-xs text-zinc-500">
               <input
                 type="checkbox"
                 checked={useContext}
@@ -160,7 +146,7 @@ export function FollowupBox({
               <span>Use current run context</span>
             </label>
           ) : (
-            <span className="text-xs text-zinc-500">Free-form mode</span>
+            <span />
           )}
 
           <button className="primary px-5 py-2 text-sm" type="submit" disabled={isLoading || !question.trim()}>
@@ -168,34 +154,27 @@ export function FollowupBox({
           </button>
         </div>
 
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
-
-        {showLoginPrompt ? (
-          <p className="text-sm text-zinc-300">
-            Continue with more follow-ups by signing in. {" "}
-            <Link className="underline underline-offset-2 hover:text-white" href="/login">
-              Sign in
-            </Link>
-            .
-          </p>
-        ) : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </form>
 
       {meta ? <p className="font-mono text-xs text-zinc-500">{meta}</p> : null}
 
-      {answer ? (
-        <div className="followup-response proof-markdown">
+      <div className={`followup-response proof-markdown ${showLoginPrompt ? "followup-response--locked" : ""}`}>
+        {answer ? (
           <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
             {answer}
           </ReactMarkdown>
-        </div>
-      ) : (
-        <div className="followup-response flex items-start">
-          <p className="text-sm text-zinc-400">
-            Concise math-first follow-up answers will appear here.
-          </p>
-        </div>
-      )}
+        ) : null}
+
+        {showLoginPrompt ? (
+          <div className="followup-lock-overlay">
+            <p className="text-sm text-zinc-700">Sign in to continue follow-up questions.</p>
+            <Link className="rounded border border-border px-3 py-1.5 text-xs text-zinc-700 hover:text-black" href="/login">
+              Sign in
+            </Link>
+          </div>
+        ) : null}
+      </div>
     </article>
   );
 }

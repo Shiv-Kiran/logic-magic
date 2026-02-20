@@ -1,11 +1,11 @@
 ﻿@import "tailwindcss";
 
 :root {
-  --bg: #050505;
-  --bg-soft: #0a0a0a;
-  --fg: #fafafa;
-  --border: #333333;
-  --accent: #ffffff;
+  --bg: #f8f8f7;
+  --bg-soft: #ffffff;
+  --fg: #050505;
+  --border: #d4d4d4;
+  --accent: #050505;
 }
 
 @theme inline {
@@ -36,14 +36,14 @@ body {
 
 .app-grid {
   background:
-    radial-gradient(circle at 80% -10%, rgba(255, 255, 255, 0.08), transparent 42%),
-    radial-gradient(circle at 10% 120%, rgba(255, 255, 255, 0.03), transparent 30%),
+    radial-gradient(circle at 80% -10%, rgba(0, 0, 0, 0.08), transparent 40%),
+    radial-gradient(circle at 10% 120%, rgba(0, 0, 0, 0.04), transparent 30%),
     var(--bg);
 }
 
 .surface {
   border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg-soft) 92%, black 8%);
+  background: var(--bg-soft);
   border-radius: 14px;
 }
 
@@ -51,14 +51,14 @@ body {
   font-size: 0.72rem;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--fg) 76%, #888 24%);
+  color: #5a5a5a;
 }
 
 .terminal {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #000;
-  color: #ededed;
+  background: #ffffff;
+  color: #101010;
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.85rem;
   line-height: 1.6;
@@ -77,7 +77,7 @@ select {
 }
 
 textarea {
-  background: #060606;
+  background: #ffffff;
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -88,12 +88,12 @@ textarea {
 }
 
 textarea::placeholder {
-  color: #838383;
+  color: #8a8a8a;
 }
 
 button.primary {
   background: var(--accent);
-  color: #050505;
+  color: #f8f8f7;
   border: 1px solid var(--accent);
   border-radius: 10px;
   padding: 0.7rem 1rem;
@@ -104,12 +104,30 @@ button.primary:disabled {
   opacity: 0.55;
 }
 
-input[type="radio"] {
-  accent-color: #fff;
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: #303030;
+  background: #fff;
+}
+
+.icon-button:hover {
+  color: #050505;
+  border-color: #9a9a9a;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: #050505;
 }
 
 .proof-markdown {
-  color: #e8e8e8;
+  color: #1d1d1d;
   font-size: 0.95rem;
   max-width: 84ch;
   overflow-wrap: anywhere;
@@ -138,15 +156,15 @@ input[type="radio"] {
 
 .proof-markdown code {
   font-family: var(--font-jetbrains-mono), monospace;
-  background: #0b0b0b;
-  border: 1px solid #222;
+  background: #f1f1f1;
+  border: 1px solid #d0d0d0;
   border-radius: 6px;
   padding: 0.05rem 0.25rem;
 }
 
 .proof-markdown pre {
-  background: #0a0a0a;
-  border: 1px solid #262626;
+  background: #f6f6f6;
+  border: 1px solid #d8d8d8;
   border-radius: 10px;
   overflow-x: auto;
   padding: 0.75rem 0.9rem;
@@ -164,12 +182,32 @@ input[type="radio"] {
 }
 
 .followup-response {
+  position: relative;
+  min-height: 168px;
   max-height: 280px;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #070707;
+  background: #ffffff;
   padding: 0.75rem 0.85rem;
+}
+
+.followup-response--locked > *:not(.followup-lock-overlay) {
+  filter: blur(4px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.followup-lock-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  background: rgba(248, 248, 247, 0.72);
+  backdrop-filter: blur(2px);
 }
 
 .proof-scroll-panel {
@@ -177,7 +215,7 @@ input[type="radio"] {
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #070707;
+  background: #ffffff;
   padding: 0.8rem 0.9rem;
 }
 
@@ -188,7 +226,7 @@ input[type="radio"] {
   display: flex;
   align-items: stretch;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.94);
+  background: rgba(248, 248, 247, 0.95);
   padding: 1rem;
 }
 
@@ -196,7 +234,7 @@ input[type="radio"] {
   width: min(100%, 1100px);
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #050505;
+  background: #ffffff;
   padding: 1rem;
 }
 
@@ -205,7 +243,38 @@ input[type="radio"] {
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #070707;
+  background: #ffffff;
   padding: 0.9rem 1rem;
 }
 
+.text-white {
+  color: #050505;
+}
+
+.text-zinc-100 {
+  color: #111827;
+}
+
+.text-zinc-200 {
+  color: #1f2937;
+}
+
+.text-zinc-300 {
+  color: #334155;
+}
+
+.text-zinc-400 {
+  color: #475569;
+}
+
+.text-zinc-500 {
+  color: #64748b;
+}
+
+.hover\:text-white:hover {
+  color: #050505;
+}
+
+.border-white {
+  border-color: #050505;
+}
