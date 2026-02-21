@@ -10,17 +10,17 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <main className="app-grid min-h-screen px-4 py-10 sm:px-8">
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-5">
-        <div className="flex items-center justify-between gap-3">
+    <main className="about-stage min-h-screen px-4 py-6 sm:px-8 sm:py-8">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <header className="about-nav">
           <MagicLogicLogo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link className="rounded border border-border px-3 py-1.5 text-xs text-zinc-300 hover:text-white" href="/">
+            <Link className="about-nav-btn" href="/ide">
               Open IDE
             </Link>
           </div>
-        </div>
+        </header>
 
         <article className="marketing-panel space-y-4 p-6">
           <h1 className="text-2xl font-semibold text-white">Terms</h1>

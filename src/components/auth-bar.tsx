@@ -12,7 +12,12 @@ type AuthState = {
   email: string | null;
 };
 
-export function AuthBar() {
+type AuthBarProps = {
+  variant?: "default" | "panel";
+  signOutRedirectTo?: string;
+};
+
+export function AuthBar({ variant = "default", signOutRedirectTo = "/" }: AuthBarProps) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [authState, setAuthState] = useState<AuthState>({
     loading: Boolean(supabase),
@@ -64,13 +69,17 @@ export function AuthBar() {
     }
 
     await supabase.auth.signOut();
-    window.location.href = "/";
+    window.location.href = signOutRedirectTo;
   };
 
   const historyHref = authState.email ? "/history" : buildLoginRedirect("/history");
+  const containerClass =
+    variant === "panel"
+      ? "about-user-strip"
+      : "flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3";
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+    <div className={containerClass}>
       <div className="text-xs text-zinc-400">
         {authState.loading
           ? "Checking session..."

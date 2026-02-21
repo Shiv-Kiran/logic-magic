@@ -16,7 +16,7 @@ export default function AboutPage() {
           <MagicLogicLogo />
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link className="about-nav-btn" href="/">
+            <Link className="about-nav-btn" href="/ide">
               Open IDE
             </Link>
           </div>
@@ -34,7 +34,7 @@ export default function AboutPage() {
               Turn messy math-English into a clean Plan, formal Proof, and strict Audit in seconds.
             </p>
             <div className="flex flex-wrap items-center gap-3">
-              <Link className="about-solid-btn" href="/">
+              <Link className="about-solid-btn" href="/ide">
                 Try the IDE
               </Link>
               <a className="about-outline-btn" href="#ide-showcase">
@@ -52,7 +52,7 @@ export default function AboutPage() {
                   Write your theorem prompt, pick your mode, and watch MagicLogic produce formal structure with
                   live reasoning.
                 </p>
-                <Link className="about-solid-btn" href="/">
+                <Link className="about-solid-btn" href="/ide">
                   Open IDE
                 </Link>
               </div>
@@ -77,7 +77,7 @@ export default function AboutPage() {
               <Link className="about-solid-btn" href="/login">
                 Join MagicLogic
               </Link>
-              <Link className="about-outline-btn" href="/">
+              <Link className="about-outline-btn" href="/ide">
                 Try as guest
               </Link>
             </div>

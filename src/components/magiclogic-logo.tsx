@@ -1,11 +1,14 @@
+import Link from "next/link";
+
 type MagicLogicLogoProps = {
   size?: number;
   showWordmark?: boolean;
+  href?: string;
 };
 
-export function MagicLogicLogo({ size = 34, showWordmark = true }: MagicLogicLogoProps) {
-  return (
-    <div className="inline-flex items-center gap-3">
+export function MagicLogicLogo({ size = 34, showWordmark = true, href = "/" }: MagicLogicLogoProps) {
+  const content = (
+    <>
       <svg
         aria-hidden="true"
         width={size}
@@ -21,6 +24,16 @@ export function MagicLogicLogo({ size = 34, showWordmark = true }: MagicLogicLog
           MagicLogic
         </span>
       ) : null}
-    </div>
+    </>
   );
+
+  if (href) {
+    return (
+      <Link className="inline-flex items-center gap-3" href={href}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <div className="inline-flex items-center gap-3">{content}</div>;
 }
