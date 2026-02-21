@@ -22,7 +22,7 @@ export default function PrivacyPage() {
           </div>
         </div>
 
-        <article className="surface space-y-4 p-6">
+        <article className="marketing-panel space-y-4 p-6">
           <h1 className="text-2xl font-semibold text-white">Privacy</h1>
           <p className="text-zinc-300">
             MagicLogic processes submitted prompts to generate mathematical reasoning outputs.

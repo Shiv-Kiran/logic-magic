@@ -14,6 +14,9 @@
   --accent-fg: #000000;
   --overlay: rgba(0, 0, 0, 0.95);
   --lock-overlay: rgba(0, 0, 0, 0.7);
+  --marketing-panel-bg: #ffffff;
+  --marketing-panel-fg: #000000;
+  --marketing-panel-border: rgba(0, 0, 0, 0.22);
 }
 
 [data-theme="light"] {
@@ -29,6 +32,9 @@
   --accent-fg: #ffffff;
   --overlay: rgba(255, 255, 255, 0.95);
   --lock-overlay: rgba(255, 255, 255, 0.74);
+  --marketing-panel-bg: #000000;
+  --marketing-panel-fg: #ffffff;
+  --marketing-panel-border: rgba(255, 255, 255, 0.22);
 }
 
 @theme inline {
@@ -68,6 +74,39 @@ body {
   border: 1px solid var(--border);
   background: var(--bg-soft);
   border-radius: 14px;
+}
+
+.marketing-panel {
+  border: 1px solid var(--marketing-panel-border);
+  background: var(--marketing-panel-bg);
+  color: var(--marketing-panel-fg);
+  border-radius: 14px;
+}
+
+.marketing-panel .text-white,
+.marketing-panel .text-zinc-100 {
+  color: var(--marketing-panel-fg);
+}
+
+.marketing-panel .text-zinc-200 {
+  color: color-mix(in srgb, var(--marketing-panel-fg) 86%, transparent);
+}
+
+.marketing-panel .text-zinc-300 {
+  color: color-mix(in srgb, var(--marketing-panel-fg) 76%, transparent);
+}
+
+.marketing-panel .text-zinc-400,
+.marketing-panel .text-zinc-500 {
+  color: color-mix(in srgb, var(--marketing-panel-fg) 64%, transparent);
+}
+
+.marketing-panel a {
+  color: var(--marketing-panel-fg);
+}
+
+.marketing-panel a:hover {
+  opacity: 0.82;
 }
 
 .section-title {
