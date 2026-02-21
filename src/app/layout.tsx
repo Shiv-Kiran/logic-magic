@@ -27,11 +27,11 @@ const themeBootstrapScript = `
 `;
 
 function resolveMetadataBase(): URL {
-  const raw = process.env.NEXT_PUBLIC_APP_URL ?? "https://magiclogic.app";
+  const raw = process.env.NEXT_PUBLIC_APP_URL ?? "https://magiclogic.shivkiranbagathi.com";
   try {
     return new URL(raw);
   } catch {
-    return new URL("https://magiclogic.app");
+    return new URL("https://magiclogic.shivkiranbagathi.com");
   }
 }
 
@@ -46,11 +46,23 @@ export const metadata: Metadata = {
     title: "MagicLogic",
     description: "Logic IDE for True Math.",
     type: "website",
+    url: "/",
+    siteName: "MagicLogic",
+    images: [
+      {
+        url: "/img/MagicLogic.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "MagicLogic preview",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "MagicLogic",
     description: "Logic IDE for True Math.",
+    images: ["/img/MagicLogic.png"],
   },
   icons: {
     icon: [

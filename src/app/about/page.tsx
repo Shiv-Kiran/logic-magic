@@ -6,6 +6,28 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 export const metadata: Metadata = {
   title: "About",
+  description: "Understand math proofs like never before with MagicLogic.",
+  openGraph: {
+    title: "MagicLogic",
+    description: "Understand math proofs like never before.",
+    type: "website",
+    url: "/about",
+    images: [
+      {
+        url: "/img/MagicLogic.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "MagicLogic preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MagicLogic",
+    description: "Understand math proofs like never before.",
+    images: ["/img/MagicLogic.png"],
+  },
 };
 
 export default function AboutPage() {
