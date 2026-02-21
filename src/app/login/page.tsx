@@ -1,12 +1,14 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 export default function LoginPage() {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,7 +23,9 @@ export default function LoginPage() {
     setError(null);
     setIsLoading(true);
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=/`;
+    const nextPathRaw = searchParams.get("next")?.trim() ?? "/";
+    const nextPath = nextPathRaw.startsWith("/") ? nextPathRaw : "/";
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {

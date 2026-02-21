@@ -66,6 +66,8 @@ export function AuthBar() {
     window.location.href = "/";
   };
 
+  const historyHref = authState.email ? "/history" : "/login?next=/history";
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
       <div className="text-xs text-zinc-400">
@@ -77,12 +79,12 @@ export function AuthBar() {
       </div>
       <div className="flex items-center gap-2 text-xs">
         <ThemeToggle />
-        <Link className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white" href="/history">
+        <Link className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white" href={historyHref}>
           History
         </Link>
         {authState.email ? (
           <button
-            className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white"
+            className="auth-strong"
             type="button"
             onClick={handleSignOut}
           >
@@ -90,7 +92,7 @@ export function AuthBar() {
           </button>
         ) : (
           <Link
-            className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white"
+            className="auth-strong"
             href="/login"
           >
             Sign in
