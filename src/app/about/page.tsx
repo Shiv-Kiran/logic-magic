@@ -22,7 +22,7 @@ export default function AboutPage() {
           </div>
         </header>
 
-        <div className="about-sections">
+        <div className="about-sections about-sections--narrower">
           <section className="about-panel about-panel--hero about-reveal">
             <p className="about-eyebrow">MagicLogic</p>
             <h1 className="about-hero">

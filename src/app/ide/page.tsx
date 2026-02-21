@@ -6,7 +6,6 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { AuthBar } from "@/components/auth-bar";
 import { FollowupBox } from "@/components/followup-box";
-import { MagicLogicLogo } from "@/components/magiclogic-logo";
 import { SiteFooter } from "@/components/site-footer";
 import { getDeepDiveStatusMessage, shouldShowDeepDiveTab } from "@/lib/ui/deep-dive";
 import {
@@ -459,10 +458,9 @@ export default function Home() {
   return (
     <div className="app-grid min-h-screen">
       <main className="mx-auto flex w-full max-w-6xl flex-col gap-7 px-4 py-8 sm:px-8 lg:py-12">
-        <AuthBar />
+        <AuthBar signOutRedirectTo="/about" />
 
-        <header className="space-y-3">
-          <MagicLogicLogo />
+        <header className="space-y-3 pt-2">
           <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-5xl">Logic IDE for True Math</h1>
         </header>
 

@@ -141,6 +141,11 @@ body {
   scroll-snap-type: y mandatory;
 }
 
+.about-sections--narrower {
+  width: 95%;
+  margin-inline: auto;
+}
+
 .about-panel {
   scroll-snap-align: start;
   border: 1px solid var(--marketing-panel-border);
@@ -343,6 +348,10 @@ body {
     gap: 1rem;
   }
 
+  .about-sections--narrower {
+    width: 100%;
+  }
+
   .about-hero {
     font-size: clamp(1.9rem, 11vw, 3.25rem);
     max-width: 12ch;
@@ -351,6 +360,24 @@ body {
   .about-subcopy {
     max-width: 36ch;
     font-size: 1rem;
+  }
+
+  .ide-topbar {
+    top: 0.45rem;
+    padding: 0.62rem 0.7rem;
+  }
+
+  .ide-topbar-right {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .ide-topbar-controls {
+    flex-wrap: wrap;
+  }
+
+  .ide-topbar-status {
+    text-align: left;
   }
 }
 
@@ -484,6 +511,41 @@ button.primary:disabled {
 
 .auth-strong:hover {
   filter: brightness(0.94);
+}
+
+.ide-topbar {
+  position: sticky;
+  top: 0.75rem;
+  z-index: 22;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  padding: 0.78rem 0.95rem;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--fg) 9%, transparent);
+}
+
+.ide-topbar-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.42rem;
+}
+
+.ide-topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ide-topbar-status {
+  margin: 0;
+  line-height: 1.2;
+  text-align: right;
 }
 
 input[type="radio"],

@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { buildLoginRedirect } from "@/lib/auth/redirect";
+import { MagicLogicLogo } from "@/components/magiclogic-logo";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -13,11 +14,10 @@ type AuthState = {
 };
 
 type AuthBarProps = {
-  variant?: "default" | "panel";
   signOutRedirectTo?: string;
 };
 
-export function AuthBar({ variant = "default", signOutRedirectTo = "/" }: AuthBarProps) {
+export function AuthBar({ signOutRedirectTo = "/" }: AuthBarProps) {
   const supabase = useMemo(() => getSupabaseBrowserClient(), []);
   const [authState, setAuthState] = useState<AuthState>({
     loading: Boolean(supabase),
@@ -73,43 +73,33 @@ export function AuthBar({ variant = "default", signOutRedirectTo = "/" }: AuthBa
   };
 
   const historyHref = authState.email ? "/history" : buildLoginRedirect("/history");
-  const containerClass =
-    variant === "panel"
-      ? "about-user-strip"
-      : "flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3";
+  const statusText = authState.loading
+    ? "Checking session..."
+    : authState.email
+      ? `Signed in as ${authState.email}`
+      : "Guest mode";
 
   return (
-    <div className={containerClass}>
-      <div className="text-xs text-zinc-400">
-        {authState.loading
-          ? "Checking session..."
-          : authState.email
-            ? `Signed in as ${authState.email}`
-            : "Guest mode"}
-      </div>
-      <div className="flex items-center gap-2 text-xs">
-        <ThemeToggle />
-        <Link className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white" href={historyHref}>
-          History
-        </Link>
-        {authState.email ? (
-          <button
-            className="auth-strong"
-            type="button"
-            onClick={handleSignOut}
-          >
-            Sign out
-          </button>
-        ) : (
-          <Link
-            className="auth-strong"
-            href="/login"
-          >
-            Sign in
+    <div className="ide-topbar">
+      <MagicLogicLogo />
+      <div className="ide-topbar-right">
+        <div className="ide-topbar-controls text-xs">
+          <ThemeToggle />
+          <Link className="rounded border border-border px-3 py-1.5 text-zinc-300 hover:text-white" href={historyHref}>
+            History
           </Link>
-        )}
+          {authState.email ? (
+            <button className="auth-strong" type="button" onClick={handleSignOut}>
+              Sign out
+            </button>
+          ) : (
+            <Link className="auth-strong" href="/login">
+              Sign in
+            </Link>
+          )}
+        </div>
+        <p className="ide-topbar-status text-xs text-zinc-400">{statusText}</p>
       </div>
     </div>
   );
 }
-
