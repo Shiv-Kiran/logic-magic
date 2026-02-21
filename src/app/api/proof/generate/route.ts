@@ -244,7 +244,7 @@ export async function POST(request: NextRequest): Promise<Response> {
           sendEvent({
             type: "status",
             stage: "background",
-            message: "Supabase not configured. Background queue skipped.",
+            message: "Supabase not configured. Deep Dive generation skipped.",
           });
         }
       } catch (error) {

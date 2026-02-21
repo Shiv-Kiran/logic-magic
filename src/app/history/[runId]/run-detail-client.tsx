@@ -110,6 +110,10 @@ export function HistoryRunDetailClient({ runId }: HistoryRunDetailClientProps) {
     );
   }, [activeRole, runDetail]);
 
+  const hasDeepDive = Boolean(
+    runDetail?.variants.some((variant) => variant.variantRole === "BACKGROUND_QUALITY"),
+  );
+
   return (
     <main className="app-grid min-h-screen px-4 py-10 sm:px-8">
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-4">
@@ -157,17 +161,19 @@ export function HistoryRunDetailClient({ runId }: HistoryRunDetailClientProps) {
                   >
                     Fast Math
                   </button>
-                  <button
-                    className={`rounded border px-3 py-1 text-xs ${
-                      activeRole === "BACKGROUND_QUALITY"
-                        ? "border-white text-white"
-                        : "border-border text-zinc-400"
-                    }`}
-                    type="button"
-                    onClick={() => setActiveRole("BACKGROUND_QUALITY")}
-                  >
-                    Background Explain
-                  </button>
+                  {hasDeepDive ? (
+                    <button
+                      className={`rounded border px-3 py-1 text-xs ${
+                        activeRole === "BACKGROUND_QUALITY"
+                          ? "border-white text-white"
+                          : "border-border text-zinc-400"
+                      }`}
+                      type="button"
+                      onClick={() => setActiveRole("BACKGROUND_QUALITY")}
+                    >
+                      Deep Dive
+                    </button>
+                  ) : null}
                   <button
                     className="icon-button"
                     type="button"
@@ -183,7 +189,8 @@ export function HistoryRunDetailClient({ runId }: HistoryRunDetailClientProps) {
               {activeVariant ? (
                 <>
                   <p className="font-mono text-xs text-zinc-500">
-                    {activeVariant.variantRole} | {activeVariant.mode} | {activeVariant.strategy}
+                    {activeVariant.variantRole === "FAST_PRIMARY" ? "Primary" : "Deep Dive"} |{" "}
+                    {activeVariant.mode} | {activeVariant.strategy}
                   </p>
                   <div className="proof-scroll-panel proof-markdown">
                     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>

@@ -90,9 +90,7 @@ export function HistoryPageClient() {
                   </p>
                 </div>
                 <div className="rounded border border-border p-3">
-                  <p className="mb-1 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">
-                    Background Explain
-                  </p>
+                  <p className="mb-1 font-mono text-xs uppercase tracking-[0.15em] text-zinc-400">Deep Dive</p>
                   <p className="text-xs text-zinc-400">
                     {run.explainVariant
                       ? `${run.explainVariant.auditStatus} · ${run.explainVariant.strategy}`

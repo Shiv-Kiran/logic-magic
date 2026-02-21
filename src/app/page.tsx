@@ -29,7 +29,7 @@ type StreamState = {
   } | null;
 };
 
-type ProofTab = "FAST" | "EXPLAIN";
+type ProofTab = "PRIMARY" | "DEEP_DIVE";
 
 function FullscreenIcon() {
   return (
@@ -76,7 +76,7 @@ export default function Home() {
   const [attempt, setAttempt] = useState("");
   const [userIntent, setUserIntent] = useState<UserIntent>("LEARNING");
   const [modePreference, setModePreference] = useState<ProofMode>("MATH_FORMAL");
-  const [activeProofTab, setActiveProofTab] = useState<ProofTab>("FAST");
+  const [activeProofTab, setActiveProofTab] = useState<ProofTab>("PRIMARY");
   const [isProofFullscreen, setIsProofFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -183,7 +183,7 @@ export default function Home() {
         return;
       }
       case "background_queued": {
-        appendLog(`> Background job queued: ${event.jobId}`);
+        appendLog("> Deep Dive generation queued.");
         setStreamState((previous) => ({
           ...previous,
           backgroundJob: {
@@ -197,7 +197,7 @@ export default function Home() {
       }
       case "background_update": {
         if (event.status === "COMPLETED" && event.proof) {
-          appendLog("> Background explanatory variant is ready.");
+          appendLog("> Deep Dive variant is ready.");
           setStreamState((previous) => ({
             ...previous,
             explainPayload: event.proof ?? previous.explainPayload,
@@ -288,7 +288,7 @@ export default function Home() {
     if (scopeOverride) {
       setScopeReview(null);
     }
-    setActiveProofTab("FAST");
+    setActiveProofTab("PRIMARY");
     setLogs(["> Initializing Planner..."]);
     setStreamState({
       plan: null,
@@ -423,7 +423,7 @@ export default function Home() {
   const explainStatus = streamState.backgroundJob?.status;
 
   const activeProofMarkdown = useMemo(() => {
-    if (activeProofTab === "FAST") {
+    if (activeProofTab === "PRIMARY") {
       return streamState.fastPayload?.proofMarkdown ?? streamState.fastDraft;
     }
 
@@ -432,7 +432,7 @@ export default function Home() {
 
   const followupContext = useMemo(() => {
     const activePayload =
-      activeProofTab === "EXPLAIN" && streamState.explainPayload
+      activeProofTab === "DEEP_DIVE" && streamState.explainPayload
         ? streamState.explainPayload
         : streamState.fastPayload;
 
@@ -610,26 +610,28 @@ export default function Home() {
               <div className="flex gap-2">
                 <button
                   className={`rounded border px-3 py-1 text-xs ${
-                    activeProofTab === "FAST"
+                    activeProofTab === "PRIMARY"
                       ? "border-white text-white"
                       : "border-border text-zinc-400"
                   }`}
                   type="button"
-                  onClick={() => setActiveProofTab("FAST")}
+                  onClick={() => setActiveProofTab("PRIMARY")}
                 >
                   Fast Math
                 </button>
-                <button
-                  className={`rounded border px-3 py-1 text-xs ${
-                    activeProofTab === "EXPLAIN"
-                      ? "border-white text-white"
-                      : "border-border text-zinc-400"
-                  }`}
-                  type="button"
-                  onClick={() => setActiveProofTab("EXPLAIN")}
-                >
-                  Background Explain
-                </button>
+                {streamState.explainPayload ? (
+                  <button
+                    className={`rounded border px-3 py-1 text-xs ${
+                      activeProofTab === "DEEP_DIVE"
+                        ? "border-white text-white"
+                        : "border-border text-zinc-400"
+                    }`}
+                    type="button"
+                    onClick={() => setActiveProofTab("DEEP_DIVE")}
+                  >
+                    Deep Dive
+                  </button>
+                ) : null}
                 <button
                   className="icon-button"
                   type="button"
@@ -642,11 +644,11 @@ export default function Home() {
               </div>
             </div>
 
-            {activeProofTab === "EXPLAIN" && !streamState.explainPayload ? (
+            {!streamState.explainPayload && streamState.backgroundJob ? (
               <p className="text-sm text-zinc-400">
-                {streamState.backgroundJob
-                  ? `Background job ${streamState.backgroundJob.jobId} is ${explainStatus?.toLowerCase()}.`
-                  : "Background explain variant will appear after fast variant is queued."}
+                {explainStatus === "FAILED"
+                  ? "Deep Dive is currently unavailable."
+                  : "Deep Dive is preparing..."}
               </p>
             ) : null}
 
