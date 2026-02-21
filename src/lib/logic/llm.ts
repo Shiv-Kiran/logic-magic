@@ -2,17 +2,19 @@
 import { generateObject, generateText, streamText, LanguageModel } from "ai";
 import {
   buildFollowupUserPrompt,
+  buildMathScopeUserPrompt,
   buildCriticUserPrompt,
   buildPlannerUserPrompt,
   buildWriterUserPrompt,
   criticSystemPrompt,
   followupSystemPrompt,
+  mathScopeSystemPrompt,
   plannerSystemPrompt,
   writerSystemPrompt,
 } from "@/lib/logic/prompts";
 import { normalizeMathDelimiters, trimToLineCount } from "@/lib/logic/formatting";
-import { criticResultSchema, planJsonSchema } from "@/lib/logic/schema";
-import { ModelTier, PlanJSON, ProofMode, VariantRole } from "@/lib/logic/types";
+import { criticResultSchema, mathScopeResultSchema, planJsonSchema } from "@/lib/logic/schema";
+import { MathScopeResult, ModelTier, PlanJSON, ProofMode, VariantRole } from "@/lib/logic/types";
 
 export type ModelRunnerConfig = {
   apiKey: string;
@@ -336,6 +338,54 @@ export function createModelRunners(config: ModelRunnerConfig) {
 
       return {
         critic: result,
+        modelId,
+      };
+    },
+
+    async runMathScope(args: {
+      problem: string;
+      attempt?: string;
+      onFallback?: (from: string, to: string) => void;
+    }): Promise<{ result: MathScopeResult; modelId: string }> {
+      const primaryModel = resolveTierPrimaryModel(config, "FAST");
+
+      const { result, modelId } = await executeWithModelFallback({
+        primaryModel,
+        fallbackModel: config.modelFallback,
+        onFallback: args.onFallback,
+        runWithModel: async (modelIdToUse) => {
+          const output = await withModelTimeout(config.timeoutMs, async (abortSignal) => {
+            return generateObject({
+              model: getModel(modelIdToUse),
+              schema: mathScopeResultSchema,
+              system: mathScopeSystemPrompt,
+              prompt: buildMathScopeUserPrompt({
+                problem: args.problem,
+                attempt: args.attempt,
+              }),
+              maxRetries: 1,
+              abortSignal,
+              timeout: config.timeoutMs,
+              ...(isReasoningModel(modelIdToUse)
+                ? {
+                    providerOptions: {
+                      openai: {
+                        reasoningEffort: "minimal",
+                      },
+                    },
+                  }
+                : {
+                    temperature: 0,
+                  }),
+            });
+          });
+
+          return output.object;
+        },
+      });
+
+      return {
+        result,
         modelId,
       };
     },

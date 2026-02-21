@@ -49,6 +49,9 @@ describe("schema guards", () => {
     });
 
     expect(parsed.success).toBe(true);
+    if (parsed.success) {
+      expect(parsed.data.scopeOverride).toBe(false);
+    }
   });
 
   it("rejects an empty problem statement", () => {

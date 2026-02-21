@@ -121,6 +121,29 @@ If the question is ambiguous, ask one precise clarifying sentence.
 Output 3 to 8 short lines.
 Use only KaTeX-safe delimiters: $...$ and $$...$$.`;
 
+export const mathScopeSystemPrompt = `You classify whether a request belongs to a math-proof IDE.
+Return JSON only with keys: verdict, confidence, reason, suggestion.
+verdict must be one of ALLOW, REVIEW, BLOCK.
+ALLOW when the user is asking to prove, verify, derive, or reason about mathematics/discrete-math/algorithm correctness.
+REVIEW when intent is ambiguous but might be mathematical.
+BLOCK when clearly unrelated to mathematical reasoning.
+Keep reason and suggestion concise and practical.`;
+
+export function buildMathScopeUserPrompt(input: {
+  problem: string;
+  attempt?: string;
+}): string {
+  return [
+    "Problem statement:",
+    input.problem,
+    input.attempt ? "Optional attempt:" : "",
+    input.attempt ?? "",
+    "Classify scope for a math-proof environment.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export function buildFollowupUserPrompt(input: {
   question: string;
   modeHint?: ProofMode;

@@ -79,6 +79,16 @@ export type GenerateProofRequest = {
   attempt?: string;
   userIntent: UserIntent;
   modePreference?: ProofMode;
+  scopeOverride?: boolean;
+};
+
+export type MathScopeVerdict = "ALLOW" | "REVIEW" | "BLOCK";
+
+export type MathScopeResult = {
+  verdict: MathScopeVerdict;
+  confidence: number;
+  reason: string;
+  suggestion: string;
 };
 
 export type MentalModel = {

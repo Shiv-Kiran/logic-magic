@@ -9,6 +9,8 @@ export const variantRoleSchema = z.enum(["FAST_PRIMARY", "BACKGROUND_QUALITY"]);
 
 export const jobStatusSchema = z.enum(["QUEUED", "PROCESSING", "COMPLETED", "FAILED"]);
 
+export const mathScopeVerdictSchema = z.enum(["ALLOW", "REVIEW", "BLOCK"]);
+
 export const auditStatusSchema = z.enum(["PASS", "FAIL", "PASSED_WITH_WARNINGS"]);
 
 export const criticStatusSchema = z.enum(["PASS", "FAIL"]);
@@ -67,6 +69,14 @@ export const generateProofRequestSchema = z.object({
   attempt: z.string().trim().optional(),
   userIntent: userIntentSchema,
   modePreference: proofModeSchema.default("MATH_FORMAL"),
+  scopeOverride: z.boolean().optional().default(false),
+});
+
+export const mathScopeResultSchema = z.object({
+  verdict: mathScopeVerdictSchema,
+  confidence: z.number().min(0).max(1),
+  reason: z.string().trim().min(1),
+  suggestion: z.string().trim().min(1),
 });
 
 export const followupRequestSchema = z.object({

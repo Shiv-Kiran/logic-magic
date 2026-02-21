@@ -80,6 +80,11 @@ export default function Home() {
   const [isProofFullscreen, setIsProofFullscreen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [scopeReview, setScopeReview] = useState<{
+    message: string;
+    reason: string;
+    suggestion: string;
+  } | null>(null);
   const [logs, setLogs] = useState<string[]>(["> Ready."]);
   const [streamState, setStreamState] = useState<StreamState>({
     plan: null,
@@ -115,6 +120,12 @@ export default function Home() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (scopeReview) {
+      setScopeReview(null);
+    }
+  }, [problem, attempt, userIntent, modePreference, scopeReview]);
 
   const stopPolling = () => {
     if (pollingRef.current) {
@@ -264,9 +275,7 @@ export default function Home() {
     }, 2500);
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
-    event.preventDefault();
-
+  const startGeneration = async (scopeOverride = false): Promise<void> => {
     if (!problem.trim()) {
       setErrorMessage("Problem statement is required.");
       return;
@@ -276,6 +285,9 @@ export default function Home() {
 
     setIsLoading(true);
     setErrorMessage(null);
+    if (scopeOverride) {
+      setScopeReview(null);
+    }
     setActiveProofTab("FAST");
     setLogs(["> Initializing Planner..."]);
     setStreamState({
@@ -304,14 +316,41 @@ export default function Home() {
           attempt: attempt.trim() || undefined,
           userIntent,
           modePreference,
+          scopeOverride,
         }),
         signal: requestController.signal,
       });
 
       if (!response.ok) {
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        const payload = (await response.json().catch(() => null)) as
+          | {
+              error?: string;
+              code?: string;
+              message?: string;
+              reason?: string;
+              suggestion?: string;
+            }
+          | null;
+
+        if (response.status === 422 && payload?.code === "MATH_SCOPE_REVIEW") {
+          setScopeReview({
+            message: payload.message ?? "Prompt may be outside math scope.",
+            reason: payload.reason ?? "The request is ambiguous.",
+            suggestion: payload.suggestion ?? "Clarify the claim or theorem.",
+          });
+          appendLog("> Scope review requested before generation.");
+          return;
+        }
+
+        if (response.status === 422 && payload?.code === "MATH_SCOPE_BLOCKED") {
+          setScopeReview(null);
+          throw new Error(payload.message ?? "Prompt is outside math scope.");
+        }
+
         throw new Error(payload?.error ?? "Unable to start proof generation.");
       }
+
+      setScopeReview(null);
 
       if (!response.body) {
         throw new Error("Streaming response body is unavailable.");
@@ -372,6 +411,11 @@ export default function Home() {
       }
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    await startGeneration(false);
   };
 
   const finalAudit = streamState.fastPayload?.audit;
@@ -490,6 +534,22 @@ export default function Home() {
                   <span>Explanatory</span>
                 </label>
               </div>
+
+              {scopeReview ? (
+                <div className="rounded border border-border bg-background p-3 text-sm">
+                  <p className="text-zinc-200">{scopeReview.message}</p>
+                  <p className="mt-1 text-zinc-400">Reason: {scopeReview.reason}</p>
+                  <p className="mt-1 text-zinc-400">Suggestion: {scopeReview.suggestion}</p>
+                  <button
+                    className="mt-3 rounded border border-border px-3 py-1.5 text-xs text-zinc-200 hover:text-white"
+                    type="button"
+                    onClick={() => void startGeneration(true)}
+                    disabled={isLoading}
+                  >
+                    Proceed anyway
+                  </button>
+                </div>
+              ) : null}
 
               {errorMessage ? <p className="text-sm text-red-300">{errorMessage}</p> : null}
 

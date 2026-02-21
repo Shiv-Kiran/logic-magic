@@ -1,5 +1,6 @@
 ﻿import { after, NextRequest } from "next/server";
 import {
+  assessMathScope,
   StreamEvent,
   createModelRunners,
   generateProofRequestSchema,
@@ -92,6 +93,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   const supabase = getSupabaseAdminClient();
   const userId = await getAuthenticatedUserId();
   const clientIp = extractClientIp(request);
+  const runners = createModelRunners(runnerConfig);
 
   if (!userId) {
     const anonLimit = readPositiveIntEnv(process.env.GENERATE_ANON_LIMIT, 6, 100);
@@ -120,6 +122,51 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   }
 
+  const scopeResult = await assessMathScope({
+    problem: parsedRequest.data.problem,
+    attempt: parsedRequest.data.attempt,
+    classifyAmbiguous: async ({ problem, attempt }) => {
+      const classified = await runners.runMathScope({
+        problem,
+        attempt,
+      });
+
+      return classified.result;
+    },
+  });
+
+  if (scopeResult.verdict === "BLOCK") {
+    return Response.json(
+      {
+        code: "MATH_SCOPE_BLOCKED",
+        verdict: "BLOCK",
+        message: "This request does not appear to be a math-proof prompt.",
+        reason: scopeResult.reason,
+        suggestion: scopeResult.suggestion,
+        canOverride: false,
+      },
+      {
+        status: 422,
+      },
+    );
+  }
+
+  if (scopeResult.verdict === "REVIEW" && !parsedRequest.data.scopeOverride) {
+    return Response.json(
+      {
+        code: "MATH_SCOPE_REVIEW",
+        verdict: "REVIEW",
+        message: "This prompt may be mathematical, but the intent is ambiguous.",
+        reason: scopeResult.reason,
+        suggestion: scopeResult.suggestion,
+        canOverride: true,
+      },
+      {
+        status: 422,
+      },
+    );
+  }
+
   const runId = crypto.randomUUID();
   const fastMode = parsedRequest.data.modePreference;
   const backgroundMode = fastMode === "MATH_FORMAL" ? "EXPLANATORY" : "MATH_FORMAL";
@@ -133,8 +180,6 @@ export async function POST(request: NextRequest): Promise<Response> {
       };
 
       try {
-        const runners = createModelRunners(runnerConfig);
-
         const fastResult = await runVariantPipeline({
           runId,
           input: parsedRequest.data,
