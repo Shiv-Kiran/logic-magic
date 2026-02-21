@@ -13,6 +13,19 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const themeBootstrapScript = `
+(() => {
+  try {
+    const key = "magiclogic-theme";
+    const stored = window.localStorage.getItem(key);
+    const theme = stored === "light" || stored === "dark" ? stored : "dark";
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }
+})();
+`;
+
 function resolveMetadataBase(): URL {
   const raw = process.env.NEXT_PUBLIC_APP_URL ?? "https://magiclogic.app";
   try {
@@ -58,6 +71,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning data-theme="dark">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootstrapScript }} />
+      </head>
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${jetBrainsMono.variable} antialiased`}

@@ -146,6 +146,7 @@ button.primary:disabled {
 .theme-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 30px;
   width: 30px;
   border-radius: 8px;
@@ -154,10 +155,33 @@ button.primary:disabled {
   color: var(--fg);
   padding: 0;
   font-size: 0;
+  line-height: 0;
 }
 
 .theme-toggle:hover {
   border-color: var(--fg);
+}
+
+.theme-toggle svg {
+  display: block;
+}
+
+.theme-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-icon--light {
+  display: none;
+}
+
+[data-theme="light"] .theme-toggle .theme-icon--dark {
+  display: none;
+}
+
+[data-theme="light"] .theme-toggle .theme-icon--light {
+  display: inline-flex;
 }
 
 .auth-strong {
