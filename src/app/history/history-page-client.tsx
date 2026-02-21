@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 type RunSummary = {
@@ -110,6 +111,8 @@ export function HistoryPageClient() {
             </article>
           ))}
         </div>
+
+        <SiteFooter />
       </section>
     </main>
   );

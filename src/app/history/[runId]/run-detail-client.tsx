@@ -7,6 +7,7 @@ import rehypeKatex from "rehype-katex";
 import remarkMath from "remark-math";
 import { FollowupBox } from "@/components/followup-box";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { SiteFooter } from "@/components/site-footer";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PlanJSON, ProofMode, VariantRole } from "@/lib/logic/types";
 
@@ -286,6 +287,8 @@ export function HistoryRunDetailClient({ runId }: HistoryRunDetailClientProps) {
                 </div>
               </div>
             ) : null}
+
+            <SiteFooter />
           </>
         ) : null}
       </section>

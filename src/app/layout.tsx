@@ -13,9 +13,32 @@ const jetBrainsMono = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+function resolveMetadataBase(): URL {
+  const raw = process.env.NEXT_PUBLIC_APP_URL ?? "https://magiclogic.app";
+  try {
+    return new URL(raw);
+  } catch {
+    return new URL("https://magiclogic.app");
+  }
+}
+
 export const metadata: Metadata = {
-  title: "MagicLogic",
-  description: "Logic IDE for transforming natural-language proofs into structured formal reasoning.",
+  metadataBase: resolveMetadataBase(),
+  title: {
+    default: "MagicLogic",
+    template: "%s | MagicLogic",
+  },
+  description: "Logic IDE for True Math.",
+  openGraph: {
+    title: "MagicLogic",
+    description: "Logic IDE for True Math.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "MagicLogic",
+    description: "Logic IDE for True Math.",
+  },
   icons: {
     icon: [
       {

@@ -7,6 +7,7 @@ import remarkMath from "remark-math";
 import { AuthBar } from "@/components/auth-bar";
 import { FollowupBox } from "@/components/followup-box";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
+import { SiteFooter } from "@/components/site-footer";
 import {
   FinalProofPayload,
   JobStatus,
@@ -712,6 +713,8 @@ export default function Home() {
             Ready for your first proof request.
           </p>
         ) : null}
+
+        <SiteFooter />
       </main>
 
       {isProofFullscreen ? (
