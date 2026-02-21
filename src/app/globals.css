@@ -83,6 +83,11 @@ body {
   border-radius: 14px;
 }
 
+.marketing-panel--about-width {
+  width: 95%;
+  margin-inline: auto;
+}
+
 .marketing-panel .text-white,
 .marketing-panel .text-zinc-100 {
   color: var(--marketing-panel-fg);
@@ -362,9 +367,15 @@ body {
     font-size: 1rem;
   }
 
+  .marketing-panel--about-width {
+    width: 100%;
+  }
+
   .ide-topbar {
     top: 0.45rem;
     padding: 0.62rem 0.7rem;
+    width: 100%;
+    margin-left: 0;
   }
 
   .ide-topbar-right {
@@ -527,6 +538,8 @@ button.primary:disabled {
   backdrop-filter: blur(10px);
   padding: 0.78rem 0.95rem;
   box-shadow: 0 8px 24px color-mix(in srgb, var(--fg) 9%, transparent);
+  width: calc(100% + 1.5rem);
+  margin-left: -0.75rem;
 }
 
 .ide-topbar-right {

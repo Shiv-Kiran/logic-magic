@@ -22,7 +22,7 @@ export default function TermsPage() {
           </div>
         </header>
 
-        <article className="marketing-panel space-y-4 p-6">
+        <article className="marketing-panel marketing-panel--about-width space-y-4 p-6">
           <h1 className="text-2xl font-semibold text-white">Terms</h1>
           <p className="text-zinc-300">
             MagicLogic is provided as-is for educational and productivity use. Generated proofs are model outputs
