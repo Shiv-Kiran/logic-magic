@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AuthChangeEvent, Session } from "@supabase/supabase-js";
+import { buildLoginRedirect } from "@/lib/auth/redirect";
 import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -66,7 +67,7 @@ export function AuthBar() {
     window.location.href = "/";
   };
 
-  const historyHref = authState.email ? "/history" : "/login?next=/history";
+  const historyHref = authState.email ? "/history" : buildLoginRedirect("/history");
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">

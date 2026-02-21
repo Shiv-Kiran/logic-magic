@@ -9,10 +9,13 @@
 - Default timeout per model call: `OPENAI_TIMEOUT_MS` (fallback 20s)
 - Fast-first model policy:
   - Fast path uses `OPENAI_MODEL_FAST` (default `gpt-4.1`)
-  - Background quality path uses `OPENAI_MODEL_QUALITY` (default `gpt-5`)
+  - Deep Dive async path uses `OPENAI_MODEL_QUALITY` (default `gpt-5`)
   - Follow-up path uses `OPENAI_MODEL_FOLLOWUP` (default `gpt-4.1`)
   - Per-step fallback uses `OPENAI_MODEL_FALLBACK`
 - Models are sourced from env config; `OPENAI_MODEL_FAST` is required.
+- Scope guard policy for `POST /api/proof/generate`:
+  - `MATH_SCOPE_BLOCKED` returns HTTP `422` and cannot be overridden.
+  - `MATH_SCOPE_REVIEW` returns HTTP `422`; client can retry with `scopeOverride=true`.
 
 ## Fallback Rules
 
@@ -23,9 +26,12 @@
 ## Persistence Rules
 
 - Fast variant is persisted when Supabase is configured.
-- Background jobs are written to `public.proof_jobs` and processed by `POST /api/internal/jobs/process`.
-- Background jobs are also dispatched asynchronously from `POST /api/proof/generate` using server `after(...)`.
-- If Supabase is unavailable/misconfigured, generation still returns; background queue/history are skipped.
+- Deep Dive jobs are written to `public.proof_jobs` and processed by `POST /api/internal/jobs/process`.
+- Deep Dive jobs are also dispatched asynchronously from `POST /api/proof/generate` using server `after(...)`.
+- Polling `GET /api/proof/jobs/[jobId]` can opportunistically kick stale queued jobs:
+  - `OPPORTUNISTIC_JOB_KICK_DELAY_SECONDS` (default 6)
+  - `OPPORTUNISTIC_JOB_RETRIGGER_SECONDS` (default 15)
+- If Supabase is unavailable/misconfigured, generation still returns; Deep Dive queue/history are skipped.
 - History APIs are authenticated and user-scoped (`/api/proof/history`, `/api/proof/history/[runId]`).
 - Follow-up API allows anonymous free-form questions, but run-bound context requires ownership checks.
 - Anonymous follow-up policy:
@@ -42,7 +48,7 @@
 3. For internal worker endpoint access, confirm `INTERNAL_CRON_SECRET` (or `CRON_SECRET`) is configured.
 4. Run `npm run lint && npm run test && npm run build`.
 5. Verify stream order includes `status`, `heartbeat`, `plan`, `draft_delta`, `final_fast`, `background_queued`.
-6. Verify queued jobs are picked up asynchronously after generate, or manually via `/api/internal/jobs/process`.
+6. Verify queued Deep Dive jobs are picked up asynchronously after generate, or manually via `/api/internal/jobs/process`.
 7. Verify signed-in user can open `/history` and `/history/[runId]` and only see their own rows.
 8. Verify follow-up returns concise markdown and uses run context only for owned runs.
 9. Verify anonymous users can ask 2 follow-ups, then receive sign-in-required response.

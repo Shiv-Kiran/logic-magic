@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { HistoryRunDetailClient } from "@/app/history/[runId]/run-detail-client";
+import { buildLoginRedirect } from "@/lib/auth/redirect";
 import { getAuthenticatedUserId } from "@/lib/supabase/auth-server";
 
 type Params = {
@@ -11,7 +12,7 @@ export default async function HistoryRunDetailPage({ params }: Params) {
   const userId = await getAuthenticatedUserId();
 
   if (!userId) {
-    redirect(`/login?next=${encodeURIComponent(`/history/${runId}`)}`);
+    redirect(buildLoginRedirect(`/history/${runId}`));
   }
 
   return <HistoryRunDetailClient runId={runId} />;

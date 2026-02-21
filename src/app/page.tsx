@@ -8,6 +8,7 @@ import { AuthBar } from "@/components/auth-bar";
 import { FollowupBox } from "@/components/followup-box";
 import { MagicLogicLogo } from "@/components/magiclogic-logo";
 import { SiteFooter } from "@/components/site-footer";
+import { getDeepDiveStatusMessage, shouldShowDeepDiveTab } from "@/lib/ui/deep-dive";
 import {
   FinalProofPayload,
   JobStatus,
@@ -422,6 +423,11 @@ export default function Home() {
   const finalAudit = streamState.fastPayload?.audit;
   const hasOutput = Boolean(streamState.plan || streamState.fastDraft || streamState.fastPayload);
   const explainStatus = streamState.backgroundJob?.status;
+  const showDeepDiveTab = shouldShowDeepDiveTab(Boolean(streamState.explainPayload));
+  const deepDiveStatusMessage = getDeepDiveStatusMessage({
+    hasDeepDivePayload: Boolean(streamState.explainPayload),
+    jobStatus: explainStatus,
+  });
 
   const activeProofMarkdown = useMemo(() => {
     if (activeProofTab === "PRIMARY") {
@@ -620,7 +626,7 @@ export default function Home() {
                 >
                   Fast Math
                 </button>
-                {streamState.explainPayload ? (
+                {showDeepDiveTab ? (
                   <button
                     className={`rounded border px-3 py-1 text-xs ${
                       activeProofTab === "DEEP_DIVE"
@@ -645,12 +651,8 @@ export default function Home() {
               </div>
             </div>
 
-            {!streamState.explainPayload && streamState.backgroundJob ? (
-              <p className="text-sm text-zinc-400">
-                {explainStatus === "FAILED"
-                  ? "Deep Dive is currently unavailable."
-                  : "Deep Dive is preparing..."}
-              </p>
+            {deepDiveStatusMessage ? (
+              <p className="text-sm text-zinc-400">{deepDiveStatusMessage}</p>
             ) : null}
 
             {activeProofMarkdown ? (
