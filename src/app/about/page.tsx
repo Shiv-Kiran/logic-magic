@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <main className="about-stage min-h-screen px-4 py-6 sm:px-8 sm:py-8">
-      <section className="mx-auto w-full max-w-6xl">
+      <section className="mx-auto w-full max-w-7xl">
         <header className="about-nav mb-6">
           <MagicLogicLogo />
           <div className="flex items-center gap-2">
@@ -23,7 +23,7 @@ export default function AboutPage() {
         </header>
 
         <div className="about-sections">
-          <section className="about-panel about-reveal">
+          <section className="about-panel about-panel--hero about-reveal">
             <p className="about-eyebrow">MagicLogic</p>
             <h1 className="about-hero">
               Understand math proofs
@@ -43,7 +43,7 @@ export default function AboutPage() {
             </div>
           </section>
 
-          <section className="about-panel about-reveal" id="ide-showcase">
+          <section className="about-panel about-panel--standard about-reveal" id="ide-showcase">
             <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
               <div className="space-y-3">
                 <p className="about-eyebrow">Try It Yourself</p>
@@ -67,7 +67,7 @@ export default function AboutPage() {
             </div>
           </section>
 
-          <section className="about-panel about-reveal">
+          <section className="about-panel about-panel--standard about-reveal">
             <p className="about-eyebrow">Join In</p>
             <h2 className="about-section-title">Build better proof intuition with a serious tool.</h2>
             <p className="about-subcopy">
